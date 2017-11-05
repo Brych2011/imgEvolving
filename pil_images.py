@@ -1,7 +1,7 @@
 from PIL import Image, ImageDraw
 import pygame
 import random
-
+# # hey there
 SIZE = 500,500
 CIRCLES = 50
 
