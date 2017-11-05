@@ -3,6 +3,7 @@ from PIL import Image
 import numpy as np
 import random
 import json
+from copy import deepcopy
 """
 IMAGE = Image.open('mona_lisa_small.jpg')
 IMAGE.thumbnail((90,60))
@@ -88,7 +89,7 @@ def draw_creature(genome):
 
 
 def mutate(start_genome):
-    genome = start_genome.copy()
+    genome = deepcopy(start_genome)
     repeat = True
     while repeat:
         choice = random.randint(1, 5)
@@ -118,9 +119,9 @@ if __name__ == '__main__':
 
     improvements = 0
     staring_fitness = check_fitness(creature)
-    for i in range(10000):
+    for i in range(100000):
         if i % 500 == 0:
-            print(check_fitness(creature))
+            print(i, check_fitness(creature))
         kid = mutate(creature)
         if check_fitness(creature) < check_fitness(kid):
             creature = kid
