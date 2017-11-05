@@ -10,13 +10,13 @@ IMAGE.save('mona_lisa_even_smaller.jpg', 'JPEG')
 TARGET = np.array(IMAGE)
 """
 pg_im = pygame.image.load('mona_lisa_even_smaller.jpg')
-TARGET = pygame.surfarray.array3d(pg_im)
+TARGET = pygame.surfarray.array3d(pg_im).astype('int16')
 SIZE = pg_im.get_size()
 SHAPE = TARGET.shape
 print(SIZE
       )
 print(TARGET.shape)
-CIRCLES = 70
+CIRCLES = 40
 ACCURACY = 1
 
 
@@ -28,7 +28,7 @@ def genome_to_array(genome):
         color.append(circle[3])
         pygame.draw.circle(new_im, color, (circle[2], circle[2]), circle[2])
         pgim.blit(new_im, [circle[1][i] - circle[2] for i in range(2)])
-    return pygame.surfarray.array3d(pgim)
+    return pygame.surfarray.array3d(pgim).astype('int16')
 
 
 def random_genome():
@@ -65,6 +65,13 @@ def check_fitness2(genome):
     genome2 = genome_array.reshape(w * h, d)
     fitness = (sum(abs(genome2 - target2).flat) ** 2) * -1
     return fitness
+
+
+def show_fitness_errors(genome):
+    genome_array = genome_to_array(genome)
+    difference1 = TARGET - genome_array
+    difference2 = genome_array - TARGET
+    return difference1, difference2, TARGET
 
 
 def draw_creature(genome):
@@ -108,18 +115,23 @@ def mutate(start_genome):
 
 if __name__ == '__main__':
     creature = random_genome()
-    """
+
     improvements = 0
+    staring_fitness = check_fitness(creature)
     for i in range(10000):
-        print(i)
+        if i % 500 == 0:
+            print(check_fitness(creature))
         kid = mutate(creature)
         if check_fitness(creature) < check_fitness(kid):
             creature = kid
             improvements += 1
-    IMAGE.show()
+    # #IMAGE.show()
     draw_creature(creature)
-    print(improvements)
+    print('improved {} times'.format(improvements))
+    print('starting {}'.format(staring_fitness))
+    print('end      {}'.format(check_fitness(creature)))
     """
+    show_fitness_errors(creature)
     w,h,d = TARGET.shape
     print(tuple(np.average(TARGET.reshape(w*h, d), axis=0)))
     test = [[[85,72,53], [30, 20], 200, 255]]
@@ -130,5 +142,6 @@ if __name__ == '__main__':
     print('white:    {}'.format(check_fitness(test2)))
     draw_creature(test)
     draw_creature(creature)
+    """
 
 
