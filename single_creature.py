@@ -50,7 +50,11 @@ def check_fitness(genome):
 
 def check_fitness3(genome):
     genome_array = genome_to_array(genome)
-    fitness = (sum(abs(genome_array - TARGET).flat) ** 2) * -1
+    difference = genome_array - TARGET
+    abs_difference = abs(difference)
+    sum_difference = sum(abs_difference.flat)
+    print(type(sum_difference))
+    fitness = sum_difference ** 2 * -1
     return fitness
 
 
