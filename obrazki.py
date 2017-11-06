@@ -78,6 +78,5 @@ if __name__ == '__main__':
         json.dump([gen, population], file)
         file.close()
 
-
-    draw_creature(sorted_pop[0])
+    draw_creature(sorted_pop[0], scale=9)
     IMAGE.show()
