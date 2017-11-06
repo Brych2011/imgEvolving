@@ -16,10 +16,9 @@ pg_im = pygame.image.load('mona_lisa_even_smaller.jpg')   # #load target image
 TARGET = pygame.surfarray.array3d(pg_im).astype('int16')  # #convert to int16 array
 SIZE = pg_im.get_size()
 SHAPE = TARGET.shape
-print(SIZE
-      )
+print(SIZE)
 print(TARGET.shape)
-CIRCLES = 45
+CIRCLES = 60
 ACCURACY = 1  # #obsolete(?)
 
 
