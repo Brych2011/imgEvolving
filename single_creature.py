@@ -1,8 +1,8 @@
 import pygame
 from PIL import Image
-import numpy as np
+#import numpy as np
 import random
-import json
+#import json
 from copy import deepcopy
 """
 IMAGE = Image.open('mona_lisa_small.jpg')
@@ -17,7 +17,7 @@ SHAPE = TARGET.shape
 print(SIZE
       )
 print(TARGET.shape)
-CIRCLES = 70
+CIRCLES = 45
 ACCURACY = 1  # #obsolete(?)
 
 
@@ -52,7 +52,7 @@ def check_fitness(genome):
     return fitness
 
 
-def draw_creature(genome):
+def draw_creature(genome, save=False):
     pgim = pygame.Surface((SIZE[0], SIZE[1]), pygame.SRCALPHA)
     for circle in genome:  # #same as in genome_to_array
         new_im = pygame.Surface((circle[2] * 2, circle[2] * 2), pygame.SRCALPHA)
@@ -62,6 +62,8 @@ def draw_creature(genome):
         pgim.blit(new_im, [circle[1][i] - circle[2] for i in range(2)])
     pg_stringim = pygame.image.tostring(pgim, 'RGBA')
     im = Image.frombytes('RGBA', (SIZE[0], SIZE[1]), pg_stringim)
+    if save:
+        im.save('evolved2.bmp', 'BMP')
     im.show()
 
 
@@ -96,7 +98,7 @@ if __name__ == '__main__':
 
     improvements = 0
     staring_fitness = check_fitness(creature)
-    for i in range(300000):
+    for i in range(200000):
         if i % 500 == 0:
             print(i, check_fitness(creature))  # #check progress every 500 gens
         kid = mutate(creature)  # #create a mutated kid
@@ -104,7 +106,7 @@ if __name__ == '__main__':
             creature = kid
             improvements += 1
     # #IMAGE.show()
-    draw_creature(creature)
+    draw_creature(creature, True)
     print('improved {} times'.format(improvements))
     print('starting {}'.format(staring_fitness))
     print('end      {}'.format(check_fitness(creature)))
