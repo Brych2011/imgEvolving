@@ -4,3 +4,5 @@ Really. Nothing more
 Commit from laptop
 new line?
 Secdond attempt
+
+edytuje ten plik
