@@ -5,13 +5,16 @@ import random
 import json
 from copy import deepcopy
 import time
-
+import matplotlib.pyplot as plt
 """
 IMAGE = Image.open('mona_lisa_small.jpg')
 IMAGE.thumbnail((90,60))
 IMAGE.save('mona_lisa_even_smaller.jpg', 'JPEG')
 TARGET = np.array(IMAGE)
 """
+
+
+PLOT = []
 pg_im = pygame.image.load('mona_lisa_even_smaller.jpg')   # #load target image
 TARGET = pygame.surfarray.array3d(pg_im).astype('int16')  # #convert to int16 array
 SIZE = pg_im.get_size()
@@ -74,15 +77,23 @@ def draw_creature(genome, scale=1, save=False):
 def mutate(start_genome):
     genome = deepcopy(start_genome)  # #deepcopy is necessary (apparently)
     repeat = True
+    circleentity = random.randint(0, CIRCLES - 1)
+
+
     while repeat:
         choice = random.randint(1, 5)  # #choose a random mutation
         if choice == 1:  # #redefine color
-            genome[random.randint(0, CIRCLES - 1)][0] = [random.randint(0, 255) for i in range(3)]
+            if genome[circleentity][0][0]*1.1 > 255 or genome[circleentity][0][1]*1.1 > 255 or genome[circleentity][0][2]*1.1 > 255:
+
+                genome[circleentity][0] = [int(random.uniform(0.9, 1)*genome[circleentity][0][i]) for i in range(3)]
+            else:
+                genome[circleentity][0] = [int(random.uniform(0.9, 1.1) * genome[circleentity][0][i]) for i in range(3)]
+
         elif choice == 2:  # #redefine position
-            genome[random.randint(0, CIRCLES - 1)][1] = [random.randint(0, SIZE[0] - 1),
+            genome[circleentity][1] = [random.randint(0, SIZE[0] - 1),
                                                          random.randint(0, SIZE[1] - 1)]
         elif choice == 3:  # #redefine radius
-            genome[random.randint(0, CIRCLES - 1)][2] = random.randint(1,30)
+            genome[circleentity][2] = int(genome[circleentity][2]*random.uniform(0.9,1.1))
         elif choice == 4:  # #swap two circles on z axis
             index1 = random.randint(0, CIRCLES-1)
             index2 = random.randint(0, CIRCLES-1)
@@ -92,7 +103,13 @@ def mutate(start_genome):
             genome[index1] = genome[index2]  # #swap them
             genome[index2] = temp
         elif choice == 5:  # #redefine opacity
-            genome[random.randint(0, CIRCLES - 1)][3] = random.randint(0,255)
+            if genome[circleentity][3] * 1.1 > 255
+                genome[circleentity][3] = int(genome[circleentity][3]* uniform.randint(0.9,1))
+            else:
+                genome[circleentity][3] = int(genome[circleentity][3] * uniform.randint(0.9, 1.1))
+
+
+
         repeat = not random.randint(0, 9)  # #have 10% chance for another mutation
     return genome
 
@@ -120,7 +137,11 @@ if __name__ == '__main__':
 
         while True:
             if gen % 500 == 0:
-                print(gen, check_fitness(creature))  # #check progress every 500 gens
+                fit = check_fitness(creature)
+
+                print(gen, fit)  # #check progress every 500 gens
+                PLOT.append(fit)
+
             kid = mutate(creature)  # #create a mutated kid
             if check_fitness(creature) < check_fitness(kid):  # #replace genome if mutation if beneficial
                 creature = kid
@@ -140,6 +161,8 @@ if __name__ == '__main__':
         print('improved {} times'.format(improvements))
         print('starting {}'.format(staring_fitness))
         print('end      {}'.format(check_fitness(creature)))
+        plt.plot(PLOT)
+        plt.show()
     """
     show_fitness_errors(creature)
     w,h,d = TARGET.shape
