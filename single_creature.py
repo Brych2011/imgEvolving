@@ -2,8 +2,10 @@ import pygame
 from PIL import Image
 #import numpy as np
 import random
-#import json
+import json
 from copy import deepcopy
+import time
+
 """
 IMAGE = Image.open('mona_lisa_small.jpg')
 IMAGE.thumbnail((90,60))
@@ -52,18 +54,20 @@ def check_fitness(genome):
     return fitness
 
 
-def draw_creature(genome, save=False):
-    pgim = pygame.Surface((SIZE[0], SIZE[1]), pygame.SRCALPHA)
+def draw_creature(genome, scale=1, save=False):
+    pgim = pygame.Surface((SIZE[0] * scale, SIZE[1] * scale), pygame.SRCALPHA)
     for circle in genome:  # #same as in genome_to_array
-        new_im = pygame.Surface((circle[2] * 2, circle[2] * 2), pygame.SRCALPHA)
+        new_im = pygame.Surface((circle[2] * 2 * scale, circle[2] * 2 * scale), pygame.SRCALPHA)
         color = circle[0].copy()
         color.append(circle[3])
-        pygame.draw.circle(new_im, color, (circle[2], circle[2]), circle[2])
-        pgim.blit(new_im, [circle[1][i] - circle[2] for i in range(2)])
+        pygame.draw.circle(new_im, color, (circle[2] * scale, circle[2] * scale), circle[2] * scale)
+        pgim.blit(new_im, [(circle[1][i] - circle[2]) * scale for i in range(2)])
     pg_stringim = pygame.image.tostring(pgim, 'RGBA')
-    im = Image.frombytes('RGBA', (SIZE[0], SIZE[1]), pg_stringim)
+    im = Image.frombytes('RGBA', (SIZE[0] * scale, SIZE[1] * scale), pg_stringim)
+
     if save:
-        im.save('evolved2.bmp', 'BMP')
+
+        im.save(str(int(time.time()))+".bmp", 'BMP')
     im.show()
 
 
@@ -98,18 +102,44 @@ if __name__ == '__main__':
 
     improvements = 0
     staring_fitness = check_fitness(creature)
-    for i in range(200000):
-        if i % 500 == 0:
-            print(i, check_fitness(creature))  # #check progress every 500 gens
-        kid = mutate(creature)  # #create a mutated kid
-        if check_fitness(creature) < check_fitness(kid):  # #replace genome if mutation if beneficial
-            creature = kid
-            improvements += 1
-    # #IMAGE.show()
-    draw_creature(creature, True)
-    print('improved {} times'.format(improvements))
-    print('starting {}'.format(staring_fitness))
-    print('end      {}'.format(check_fitness(creature)))
+    try:
+        while True:
+            ans = input('n - new file \nc - continue latest creature\n')
+            if ans.lower() == 'n':
+                creature = random_genome()
+                gen = 0
+                break
+            if ans.lower() == 'c':
+                latest_txt = open('latest.txt', 'r')
+                name = latest_txt.readline()
+                saved = open(name, 'r')
+                gen, creature = json.load(saved)
+                latest_txt.close()
+                saved.close()
+                break
+
+        while True:
+            if gen % 500 == 0:
+                print(gen, check_fitness(creature))  # #check progress every 500 gens
+            kid = mutate(creature)  # #create a mutated kid
+            if check_fitness(creature) < check_fitness(kid):  # #replace genome if mutation if beneficial
+                creature = kid
+                improvements += 1
+            gen += 1
+    except KeyboardInterrupt:
+        draw_creature(creature, scale=7, save=True)
+
+        name = str('saved_instance' + str(int(time.time())))
+        latest_file = open('latest.txt', 'w')
+        latest_file.write(name)
+        latest_file.close()
+        file = open('saved_instance' + str(int(time.time())), 'w')
+        json.dump([gen, creature], file)
+        file.close()
+
+        print('improved {} times'.format(improvements))
+        print('starting {}'.format(staring_fitness))
+        print('end      {}'.format(check_fitness(creature)))
     """
     show_fitness_errors(creature)
     w,h,d = TARGET.shape
