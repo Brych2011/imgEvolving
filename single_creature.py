@@ -83,17 +83,27 @@ def mutate(start_genome):
     while repeat:
         choice = random.randint(1, 5)  # #choose a random mutation
         if choice == 1:  # #redefine color
-            if genome[circleentity][0][0]*1.1 > 255 or genome[circleentity][0][1]*1.1 > 255 or genome[circleentity][0][2]*1.1 > 255:
+            if genome[circleentity][0][0]*1.3 > 255 or genome[circleentity][0][1]*1.3 > 255 or genome[circleentity][0][2]*1.3 > 255:
 
-                genome[circleentity][0] = [int(random.uniform(0.9, 1)*genome[circleentity][0][i]) for i in range(3)]
+                genome[circleentity][0] = [int(random.uniform(0.7, 1)*genome[circleentity][0][i]) for i in range(3)]
             else:
-                genome[circleentity][0] = [int(random.uniform(0.9, 1.1) * genome[circleentity][0][i]) for i in range(3)]
+                genome[circleentity][0] = [int(numpy.random.normal(1, 0.6) * genome[circleentity][0][i]) for i in range(3)]
 
         elif choice == 2:  # #redefine position
-            genome[circleentity][1] = [random.randint(0, SIZE[0] - 1),
-                                                         random.randint(0, SIZE[1] - 1)]
+            if genome[circleentity][1][0] > SIZE[0]-50 or genome[circleentity][1][1] > SIZE[0]-50:
+                genome[circleentity][1][0] = random.randint(genome[circleentity][1][0]-50, SIZE[0]-1)
+                genome[circleentity][1][1] = random.randint(genome[circleentity][1][1]-50, SIZE[1]-1)
+
+            else:
+                genome[circleentity][1][0] = random.randint(genome[circleentity][1][0]-50, genome[circleentity][1][0]+50)
+                genome[circleentity][1][1] = random.randint(genome[circleentity][1][1]-50, genome[circleentity][1][1]+50)
+
         elif choice == 3:  # #redefine radius
-            genome[circleentity][2] = int(genome[circleentity][2]*random.uniform(0.9,1.1))
+            if genome[circleentity][2]*1.3 > 30:
+
+                    genome[circleentity][2] = int(genome[circleentity][2]*random.uniform(0.7, 1))
+            else:
+                genome[circleentity][2] = int(genome[circleentity][2] * random.uniform(0.7, 1.3))
         elif choice == 4:  # #swap two circles on z axis
             index1 = random.randint(0, CIRCLES-1)
             index2 = random.randint(0, CIRCLES-1)
@@ -103,10 +113,11 @@ def mutate(start_genome):
             genome[index1] = genome[index2]  # #swap them
             genome[index2] = temp
         elif choice == 5:  # #redefine opacity
-            if genome[circleentity][3] * 1.1 > 255
-                genome[circleentity][3] = int(genome[circleentity][3]* uniform.randint(0.9,1))
+            if genome[circleentity][3] * 1.3 > 255:
+
+                genome[circleentity][3] = int(genome[circleentity][3]* random.uniform(0.7,1))
             else:
-                genome[circleentity][3] = int(genome[circleentity][3] * uniform.randint(0.9, 1.1))
+                genome[circleentity][3] = int(genome[circleentity][3] * random.uniform(0.7, 1.3))
 
 
 
