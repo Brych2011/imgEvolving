@@ -17,6 +17,7 @@ TARGET = pygame.surfarray.array3d(pg_im).astype('int16')  # #convert to int16 ar
 SIZE = pg_im.get_size()
 SHAPE = TARGET.shape
 print(SIZE)
+
 print(TARGET.shape) #arg
 CIRCLES = 45
 ACCURACY = 1  # #obsolete(?)
@@ -25,6 +26,7 @@ class Genome(object):
     """genome with properties of given amount of circles"""
 
     def __init__(self, circles):
+
         self.genome = []
         self.circles = circles
         self.__array = []
@@ -89,7 +91,7 @@ def genome_to_array(genome):
 
 def random_genome():
     """creates a random genome"""
-    result = []
+    result = [] #sdf
     for i in range(CIRCLES):
         pos = [random.randint(0, SIZE[0]-1), random.randint(0, SIZE[1]-1)]
         color = [random.randint(0, 255) for i in range(3)]
