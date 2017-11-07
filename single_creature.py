@@ -43,7 +43,7 @@ class Genome(object):
 
     def update_array(self):
         pgim = pygame.Surface(SIZE, pygame.SRCALPHA)
-        for circle in genome:
+        for circle in self.genome:
             new_im = pygame.Surface((circle[2] * 2, circle[2] * 2),
                                     pygame.SRCALPHA)  # create a surface of size of the circle
             color = circle[0].copy()
@@ -68,12 +68,14 @@ class Genome(object):
                 index2 = random.randint(0, CIRCLES-1)
                 while index1 == index2:
                     index2 = random.randint(0, CIRCLES - 1)  # #generate two random indices
-                temp = genome[index1]
-                self.genome[index1] = genome[index2]  # #swap them
+                temp = self.genome[index1]
+                self.genome[index1] = self.genome[index2]  # #swap them
                 self.genome[index2] = temp
             elif choice == 5:  # #redefine opacity
                 self.genome[random.randint(0, CIRCLES - 1)][3] = random.randint(0, 255)
-            repeat = not random.randint(0, 9)  # #have 10% chance for another mutation
+            repeat = not random.randint(0, 9)  # #have a 10% chance for another mutation
+
+    def fitness(self):
 
 
 def genome_to_array(genome):
