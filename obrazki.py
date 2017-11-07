@@ -3,83 +3,38 @@ from PIL import Image
 import numpy as np
 import random
 import json
+from single_creature import random_genome, genome_to_array, check_fitness, mutate, draw_creature
 
-IMAGE = Image.open('mona_lisa.jpg')
+IMAGE = Image.open('mona_lisa_even_smaller.jpg')
 TARGET = np.array(IMAGE)
 SIZE = IMAGE.size
 SHAPE = TARGET.shape
-ACCURACY = 5
-CIRCLES = 50
+CIRCLES = 60
 MUTATION_RATE = 0.1
-POPULATION = 52
+POPULATION = 32
 print(SIZE)
 
 
-def random_genome():
-    result = []
-    for i in range(CIRCLES):
-        pos = [random.randint(0, SIZE[0]-1), random.randint(0, SIZE[1]-1)]
-        color = [random.randint(0, 255) for i in range(3)]
-        radius = random.randint(1, 75)
-        result.append([color, pos, radius])
-    return result
-
-
-def genome_to_array(genome):
-    pgim = pygame.Surface((SIZE[1], SIZE[0]))
-    for circle in genome:
-        pygame.draw.circle(pgim, circle[0], circle[1], circle[2])
-    return pygame.surfarray.array3d(pgim)
-
-
-def check_fintness(genome):
-    genome_array = genome_to_array(genome)
-    fitness = 0
-    for i in range(0, SHAPE[1], ACCURACY):
-        for j in range(0, SHAPE[0], ACCURACY):
-            fitness += sum(abs(TARGET[j][i] - genome_array[j][i]))
-    return fitness
-
-
-def permutate_colors(previous, rate):
-    permutation = [random.randint(rate * -1, rate) for i in range(3)]
-    result = [previous[i] + permutation[i] for i in range(3)]
-    for i in range(3):
-        if result[i] > 255:
-            result[i] = 255
-        elif result[i] < 0:
-            result[i] = 0
-    return result
-
-
 def breed(genome1, genome2):
-    new_genome1 = genome1[:CIRCLES//2] + genome2[CIRCLES//2:]
-    new_genome2 = genome2[:CIRCLES//2] + genome1[CIRCLES//2:]
+    new_genome1 = []
+    new_genome2 = []
+    for kid in new_genome1, new_genome2:
+        for i in range(CIRCLES):
+            if random.randint(0,1) == 0:
+                kid.append(genome1[i])
+            else:
+                kid.append(genome2[i])
 
-    if random.randint(1,40) == 1:
-        new_genome1[random.randint(0,CIRCLES-1)][0] = [random.randint(0, 255) for i in range(3)]
-
-    if random.randint(1,60)==1:
-        new_genome1[random.randint(0,CIRCLES - 1)][1] = [random.randint(0, SIZE[0]-1), random.randint(0, SIZE[1]-1)]
-
-    if random.randint(1, 60) == 1:
-        new_genome1[random.randint(0, CIRCLES - 1)][2] = random.randint(1,75)
-
-    if random.randint(1, 40) == 1:
-        new_genome2[random.randint(0,CIRCLES-1)][0] = [random.randint(0, 255) for i in range(3)]
-
-    if random.randint(1, 60) == 1:
-        new_genome2[random.randint(0, CIRCLES - 1)][1] = [random.randint(0, SIZE[0] - 1),
-                                                          random.randint(0, SIZE[1] - 1)]
-
-    if random.randint(1, 60) == 1:
-        new_genome2[random.randint(0, CIRCLES - 1)][2] = random.randint(1, 75)
+    if random.randint(0,1000) < 1000 * MUTATION_RATE:
+        new_genome2 = mutate(new_genome2)
+    if random.randint(0,1000) < 1000 * MUTATION_RATE:
+        new_genome1 = mutate(new_genome1)
 
     return new_genome1, new_genome2
 
 
 def sort_population(pop):
-    temp = [(i, check_fintness(i)) for i in pop]
+    temp = [(i, check_fitness(i)) for i in pop]
     return [i[0] for i in sorted(temp, key=lambda temp: temp[1])]
 
 
@@ -90,15 +45,6 @@ def next_gen(sorted_pop):
     for i in range(0, len(breedable), 2):
         new_pop.extend(breed(breedable[i], breedable[i+1]))
     return new_pop
-
-
-def draw_creature(genome):
-    pgim = pygame.Surface((SIZE[0], SIZE[1]))
-    for circle in genome:
-        pygame.draw.circle(pgim, circle[0], circle[1], circle[2])
-    pg_stringim = pygame.image.tostring(pgim, 'RGBA')
-    im = Image.frombytes('RGBA', (SIZE[0], SIZE[1]), pg_stringim)
-    im.show()
 
 
 if __name__ == '__main__':
@@ -131,6 +77,5 @@ if __name__ == '__main__':
         json.dump([gen, population], file)
         file.close()
 
-
-    draw_creature(sorted_pop[0])
+    draw_creature(sorted_pop[0], scale=9)
     IMAGE.show()
