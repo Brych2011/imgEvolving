@@ -21,6 +21,14 @@ print(TARGET.shape)
 CIRCLES = 60
 ACCURACY = 1  # #obsolete(?)
 
+class Genome(object):
+    """genome with properties of given amount of circles"""
+
+    def __init__(self, circles):
+
+
+
+
 
 def genome_to_array(genome):
     pgim = pygame.Surface(SIZE, pygame.SRCALPHA)
