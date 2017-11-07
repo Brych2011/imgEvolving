@@ -43,7 +43,7 @@ def genome_to_array(genome):
 
 def random_genome():
     """creates a random genome"""
-    result = []
+    result = [] #sdf
     for i in range(CIRCLES):
         pos = [random.randint(0, SIZE[0]-1), random.randint(0, SIZE[1]-1)]
         color = [random.randint(0, 255) for i in range(3)]
