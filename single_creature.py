@@ -17,7 +17,7 @@ TARGET = pygame.surfarray.array3d(pg_im).astype('int16')  # #convert to int16 ar
 SIZE = pg_im.get_size()
 SHAPE = TARGET.shape
 print(SIZE)
-print(TARGET.shape)
+print(TARGET.shape) #arg
 CIRCLES = 45
 ACCURACY = 1  # #obsolete(?)
 
