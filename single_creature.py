@@ -75,7 +75,8 @@ class Genome(object):
                 self.genome[random.randint(0, CIRCLES - 1)][3] = random.randint(0, 255)
             repeat = not random.randint(0, 9)  # #have a 10% chance for another mutation
 
-    def fitness(self):
+    def update(self):
+        pass
 
 
 def genome_to_array(genome):
