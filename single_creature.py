@@ -16,15 +16,22 @@ TARGET = pygame.surfarray.array3d(pg_im).astype('int16')  # #convert to int16 ar
 SIZE = pg_im.get_size()
 SHAPE = TARGET.shape
 print(SIZE)
-print(TARGET.shape) #arg
+print(TARGET.shape)
 CIRCLES = 45
 DEFAULT = object()
+
 
 class Color(object):
     """used for representation of color"""
 
-    def __init__(self):
-        self.__color_list = [random.randint(0,255) for i in range(4)]
+    def __init__(self, colors=[]):
+        self.__color_list = [0 for i in range(4)]
+        if len(colors) == 4:
+            for i in range(4):
+                self[i] = colors[i]
+
+        else:
+            self.__color_list = [random.randint(0,255) for i in range(4)]
 
     @property
     def color_list(self):
@@ -43,12 +50,19 @@ class Color(object):
         return self.__color_list[item]
 
     def __setitem__(self, key, value):
-        self.__color_list[key] = int(value)
         if self.__color_list[key] > 255:
             self.__color_list[key] = 255
         elif self.__color_list[key] < 0:
             self.__color_list[key] = 0
+        else:
+            self.__color_list[key] = int(value)
 
+
+class Circle(object):
+    """representation of one circle in genome. Takes care of legality of dimentions"""
+
+    def __init__(self):
+        pass
 
 class Genome(object):
     """genome with properties of given amount of circles"""
@@ -65,6 +79,11 @@ class Genome(object):
                 color = Color()
                 radius = random.randint(1, 30)
                 self.genome.append([color, pos, radius])
+        else:
+            for circle in genome_list:
+                circle[0] = Color(circle[0])
+            self.genome = genome_list
+
         self.update_fitness()
         self.update_array()
 
@@ -137,6 +156,7 @@ class Genome(object):
         result = self.genome.copy()
         for i in range(self.circles):
             result[i][0] = result[i][0].color_list
+        return result
 """
 def genome_to_array(genome):
     pgim = pygame.Surface(SIZE, pygame.SRCALPHA)
@@ -226,7 +246,9 @@ if __name__ == '__main__':
                 latest_txt = open('latest.txt', 'r')
                 name = latest_txt.readline()
                 saved = open(name, 'r')
-                gen, creature = json.load(saved)
+                gen, genome = json.load(saved)
+                creature = Genome(len(genome), genome)
+                starting_fitness = creature.fitness
                 latest_txt.close()
                 saved.close()
                 break
@@ -244,6 +266,7 @@ if __name__ == '__main__':
         creature.draw(scale=7, save=True)
 
         name = str('saved_instance' + str(int(time.time())))
+        print(name)
         latest_file = open('latest.txt', 'w')
         latest_file.write(name)
         latest_file.close()
