@@ -100,6 +100,7 @@ class Genome(object):
     pg_im = pygame.image.load('mona_lisa_even_smaller.jpg')  # #load target image
     target = pygame.surfarray.array3d(pg_im).astype('int16')  # #convert to int16 array
     target_shape = target.shape
+    max_radius = 50
 
     def __init__(self, circles, genome_list=DEFAULT):
         self.genome = []
@@ -111,8 +112,10 @@ class Genome(object):
         self.size = Genome.target.shape
         if genome_list == DEFAULT:
             for i in range(circles):
-                new_circle = Circle(random.randint(0 - LEGAL_BORDER, ))
-                self.genome.append([color, pos, radius])
+                new_circle = Circle(random.randint(0 - LEGAL_BORDER, Genome.target_shape[1] + LEGAL_BORDER),  # #x
+                                    random.randint(0 - LEGAL_BORDER, Genome.target_shape[0] + LEGAL_BORDER),  # #y
+                                    Color(), random.randint(1, Genome.max_radius))
+                self.genome.append(new_circle)
         else:
             for circle in genome_list:
                 circle[0] = Color(circle[0])
@@ -132,10 +135,12 @@ class Genome(object):
     def update_array(self):
         pgim = pygame.Surface(SIZE, pygame.SRCALPHA)
         for circle in self.genome:
-            new_im = pygame.Surface((circle[2] * 2, circle[2] * 2),
+            new_im = pygame.Surface((circle.radius * 2, circle.radius * 2),
                                     pygame.SRCALPHA)  # create a surface of size of the circle
-            pygame.draw.circle(new_im, circle[0].color_list, (circle[2], circle[2]), circle[2])  # #draw circle in the middle
-            pgim.blit(new_im, [circle[1][i] - circle[2] for i in range(2)])  # #blit onto main surface
+            pygame.draw.circle(new_im, circle.color,
+                               (circle.radius, circle.radius),
+                               circle.radius)  # #draw circle in the middle of its Surface
+            pgim.blit(new_im, [circle.x - circle.radius, circle.y - circle.radius)  # #blit onto main surface
         self.__array = pygame.surfarray.array3d(pgim).astype('int16')
         
     def update_fitness(self):
@@ -148,7 +153,7 @@ class Genome(object):
             if choice == 1:  # #redefine color
                 chosen = random.randrange(0, self.circles)
                 for i in range(3):
-                    self.genome[chosen][0].color_list[i] = random.randint(0, 255)
+                    self.genome[chosen].color[i] = random.randint(0, 255)
             elif choice == 2:  # #redefine position
                 self.genome[random.randrange(0, self.circles)][1] = [random.randint(0, SIZE[0] - 1),
                                                                      random.randint(0, SIZE[1] - 1)]
