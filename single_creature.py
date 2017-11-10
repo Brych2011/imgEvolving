@@ -20,52 +20,86 @@ print(TARGET.shape)
 CIRCLES = 45
 DEFAULT = object()
 
+LEGAL_BORDER = 30  # #how far out of image can circle's middle be
 
-class Color(object):
+
+class Color(list):
     """used for representation of color"""
 
-    def __init__(self, colors=[]):
-        self.__color_list = [0 for i in range(4)]
-        if len(colors) == 4:
-            for i in range(4):
-                self[i] = colors[i]
+    def __init__(self, *args):
+        if len(args) == 4:
+            for i in args:
+                if i < 0:
+                    i = 0
+                elif i > 255:
+                    i = 255
+            list.__init__(self, args)
 
         else:
-            self.__color_list = [random.randint(0,255) for i in range(4)]
-
-    @property
-    def color_list(self):
-        return self.__color_list
-
-    @color_list.setter
-    def color_list(self, value):
-        for i in range(4):
-            if value[i] > 255:
-                value[i] = 255
-            if value[i] < 0:
-                value[i] = 0
-        self.__color_list = value
-
-    def __getitem__(self, item):
-        return self.__color_list[item]
+            list.__init__(self, [random.randint(0, 255) for i in range(4)])
 
     def __setitem__(self, key, value):
-        if self.__color_list[key] > 255:
-            self.__color_list[key] = 255
-        elif self.__color_list[key] < 0:
-            self.__color_list[key] = 0
+        if value > 255:
+            list.__setitem__(self, key, 255)
+        elif value < 0:
+            list.__setitem__(self, key, 0)
         else:
-            self.__color_list[key] = int(value)
+            list.__setitem__(self, key, value)
 
 
 class Circle(object):
-    """representation of one circle in genome. Takes care of legality of dimentions"""
+    """representation of one circle in genome. Takes care of legality of dimensions"""
 
-    def __init__(self):
-        pass
+    def __init__(self, x, y, radius, color):
+        self.__x = x
+        self.__y = y
+        self.__radius = radius
+        self.color = Color(color)
+
+    @property
+    def x(self):
+        return self.__x
+
+    @x.setter
+    def x(self, value):
+        if value < 0 - LEGAL_BORDER:
+            self.__x = 0 - LEGAL_BORDER
+        elif value > Genome.target_shape[1] + LEGAL_BORDER:
+            self.__x = Genome.target_shape[1] + LEGAL_BORDER
+        else:
+            self.__x = value
+
+    @property
+    def y(self):
+        return self.__y
+
+    @y.setter
+    def y(self, value):
+        if value < 0 - LEGAL_BORDER:
+            self.__y = 0 - LEGAL_BORDER
+        elif value > Genome.target_shape[0] + LEGAL_BORDER:
+            self.__y = Genome.target_shape[0] + LEGAL_BORDER
+        else:
+            self.__y = value
+
+    @property
+    def radius(self):
+        return self.__radius
+
+    @radius.setter
+    def radius(self, value):
+        if value < 1:
+            self.__radius = 1
+        else:
+            self.__radius = value
+        
 
 class Genome(object):
     """genome with properties of given amount of circles"""
+
+    pg_im = pygame.image.load('mona_lisa_even_smaller.jpg')  # #load target image
+    target = pygame.surfarray.array3d(pg_im).astype('int16')  # #convert to int16 array
+    target_shape = target.shape
 
     def __init__(self, circles, genome_list=DEFAULT):
         self.genome = []
@@ -73,11 +107,11 @@ class Genome(object):
         self.__array = []
         self.__fitness = 0
         self.update_array()
+
+        self.size = Genome.target.shape
         if genome_list == DEFAULT:
             for i in range(circles):
-                pos = [random.randint(0, SIZE[0] - 1), random.randint(0, SIZE[1] - 1)]
-                color = Color()
-                radius = random.randint(1, 30)
+                new_circle = Circle(random.randint(0 - LEGAL_BORDER, ))
                 self.genome.append([color, pos, radius])
         else:
             for circle in genome_list:
@@ -152,11 +186,17 @@ class Genome(object):
             im.save(str(int(time.time()))+".bmp", 'BMP')
         im.show()
 
-    def get_list_represantation(self):
+    def get_list_representation(self):
         result = self.genome.copy()
         for i in range(self.circles):
             result[i][0] = result[i][0].color_list
         return result
+
+    @staticmethod
+    def change_target(image_object):
+        """change the target of all creatures. Requires pygame surface as an argument"""
+        Genome.target = pygame.surfarray.array3d(image_object).astype('int16')  # #convert to int16 array
+        Genome.target_shape = Genome.target.shape
 """
 def genome_to_array(genome):
     pgim = pygame.Surface(SIZE, pygame.SRCALPHA)
@@ -271,7 +311,7 @@ if __name__ == '__main__':
         latest_file.write(name)
         latest_file.close()
         file = open('saved_instance' + str(int(time.time())), 'w')
-        json.dump([gen, creature.get_list_represantation()], file)
+        json.dump([gen, creature.get_list_representation()], file)
         file.close()
 
         print('improved {} times'.format(improvements))
