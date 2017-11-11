@@ -20,7 +20,6 @@ print(TARGET.shape)
 CIRCLES = 45
 DEFAULT = object()
 
-LEGAL_BORDER = 30  # #how far out of image can circle's middle be
 
 
 class Color(list):
@@ -28,11 +27,12 @@ class Color(list):
 
     def __init__(self, *args):
         if len(args) == 4:
-            for i in args:
-                if i < 0:
-                    i = 0
-                elif i > 255:
-                    i = 255
+            args = list(args)
+            for i in range[4]:
+                if args[i] < 0:
+                    args[i] = 0
+                elif args[i] > 255:
+                    args[i] = 255
             list.__init__(self, args)
 
         else:
@@ -62,10 +62,10 @@ class Circle(object):
 
     @x.setter
     def x(self, value):
-        if value < 0 - LEGAL_BORDER:
-            self.__x = 0 - LEGAL_BORDER
-        elif value > Genome.target_shape[1] + LEGAL_BORDER:
-            self.__x = Genome.target_shape[1] + LEGAL_BORDER
+        if value < 0 - Genome.legal_border:
+            self.__x = 0 - Genome.legal_border
+        elif value > Genome.target_shape[1] + Genome.legal_border:
+            self.__x = Genome.target_shape[1] + Genome.legal_border
         else:
             self.__x = value
 
@@ -75,10 +75,10 @@ class Circle(object):
 
     @y.setter
     def y(self, value):
-        if value < 0 - LEGAL_BORDER:
-            self.__y = 0 - LEGAL_BORDER
-        elif value > Genome.target_shape[0] + LEGAL_BORDER:
-            self.__y = Genome.target_shape[0] + LEGAL_BORDER
+        if value < 0 - Genome.legal_border:
+            self.__y = 0 - Genome.legal_border
+        elif value > Genome.target_shape[0] + Genome.legal_border:
+            self.__y = Genome.target_shape[0] + Genome.legal_border
         else:
             self.__y = value
 
@@ -90,6 +90,8 @@ class Circle(object):
     def radius(self, value):
         if value < 1:
             self.__radius = 1
+        elif value > Genome.max_radius:
+            self.__radius = Genome.max_radius
         else:
             self.__radius = value
         
@@ -102,6 +104,8 @@ class Genome(object):
     target_shape = target.shape
     max_radius = 50
 
+    legal_border = 30  # #how far out of image can circle's middle be
+
     def __init__(self, circles, genome_list=DEFAULT):
         self.genome = []
         self.circles = circles
@@ -112,12 +116,12 @@ class Genome(object):
         self.size = Genome.target.shape
         if genome_list == DEFAULT:
             for i in range(circles):
-                new_circle = Circle(random.randint(0 - LEGAL_BORDER, Genome.target_shape[1] + LEGAL_BORDER),  # #x
-                                    random.randint(0 - LEGAL_BORDER, Genome.target_shape[0] + LEGAL_BORDER),  # #y
-                                    Color(), random.randint(1, Genome.max_radius))
+                new_circle = Circle(random.randint(0 - Genome.legal_border, Genome.target_shape[1] + Genome.legal_border),  # #x
+                                    random.randint(0 - Genome.legal_border, Genome.target_shape[0] + Genome.legal_border),  # #y
+                                    random.randint(1, Genome.max_radius), Color())
                 self.genome.append(new_circle)
         else:
-            for circle in genome_list:
+            for circle in genome_list:  #TODO adapt it to Circle objects
                 circle[0] = Color(circle[0])
             self.genome = genome_list
 
@@ -140,7 +144,7 @@ class Genome(object):
             pygame.draw.circle(new_im, circle.color,
                                (circle.radius, circle.radius),
                                circle.radius)  # #draw circle in the middle of its Surface
-            pgim.blit(new_im, [circle.x - circle.radius, circle.y - circle.radius)  # #blit onto main surface
+            pgim.blit(new_im, [circle.x - circle.radius, circle.y - circle.radius])  # #blit onto main surface
         self.__array = pygame.surfarray.array3d(pgim).astype('int16')
         
     def update_fitness(self):
@@ -155,10 +159,14 @@ class Genome(object):
                 for i in range(3):
                     self.genome[chosen].color[i] = random.randint(0, 255)
             elif choice == 2:  # #redefine position
-                self.genome[random.randrange(0, self.circles)][1] = [random.randint(0, SIZE[0] - 1),
-                                                                     random.randint(0, SIZE[1] - 1)]
+                self.genome[random.randrange(0, self.circles)].x = random.randrange(0 - Genome.legal_border,
+                                                                                    Genome.target_shape[1] + Genome.legal_border)
+
+                self.genome[random.randrange(0, self.circles)].y = random.randrange(0 - Genome.legal_border,
+                                                                                    Genome.target_shape[0] + Genome.legal_border)
             elif choice == 3:  # #redefine radius
-                self.genome[random.randrange(0, self.circles)][2] = random.randint(1, 30)
+                self.genome[random.randrange(0, self.circles)].radius = random.randint(1, Genome.max_radius)
+
             elif choice == 4:  # #swap two circles on z axis
                 index1 = random.randrange(0, self.circles)
                 index2 = random.randrange(0, self.circles)
@@ -167,21 +175,25 @@ class Genome(object):
                 temp = self.genome[index1]
                 self.genome[index1] = self.genome[index2]  # #swap them
                 self.genome[index2] = temp
+
             elif choice == 5:  # #redefine opacity
-                self.genome[random.randrange(0, self.circles)][0][3] = random.randint(0, 255)
+                self.genome[random.randrange(0, self.circles)].color[3] = random.randint(0, 255)
             repeat = not random.randint(0, 9)  # #have 10% chance for another mutation
+
         self.update_array()
         self.update_fitness()
 
     def draw(self, scale=1, save=False):
         pgim = pygame.Surface((SIZE[0] * scale, SIZE[1] * scale), pygame.SRCALPHA)
 
-        for circle in self.genome:  # #same as in genome_to_array
-            new_im = pygame.Surface((circle[2] * 2 * scale, circle[2] * 2 * scale), pygame.SRCALPHA)
-
-            pygame.draw.circle(new_im, circle[0].color_list, (circle[2] * scale, circle[2] * scale),
-                               circle[2] * scale)  # #draw circle in the middle of its Surface
-            pgim.blit(new_im, [(circle[1][i] - circle[2]) * scale for i in range(2)])
+        for circle in self.genome:
+            new_im = pygame.Surface((circle.radius * 2 * scale, circle.radius * 2 * scale),
+                                    pygame.SRCALPHA)  # create a surface of size of the circle
+            pygame.draw.circle(new_im, circle.color,
+                               (circle.radius * scale, circle.radius * scale),
+                               circle.radius * scale)  # #draw circle in the middle of its Surface
+            pgim.blit(new_im, [(circle.x - circle.radius) * scale,
+                               (circle.y - circle.radius) * scale])  # #blit onto main surface
 
         pg_stringim = pygame.image.tostring(pgim, 'RGBA')
         im = Image.frombytes('RGBA', (SIZE[0] * scale, SIZE[1] * scale), pg_stringim)
@@ -192,9 +204,13 @@ class Genome(object):
         im.show()
 
     def get_list_representation(self):
-        result = self.genome.copy()
+        result = []
         for i in range(self.circles):
-            result[i][0] = result[i][0].color_list
+            new_circle = []
+            new_circle.append(self.genome[i].color)
+            new_circle.append([self.genome[i].x, self.genome[i].y])
+            new_circle.append([self.genome[i].radius])
+            result.append(new_circle)
         return result
 
     @staticmethod
@@ -202,80 +218,7 @@ class Genome(object):
         """change the target of all creatures. Requires pygame surface as an argument"""
         Genome.target = pygame.surfarray.array3d(image_object).astype('int16')  # #convert to int16 array
         Genome.target_shape = Genome.target.shape
-"""
-def genome_to_array(genome):
-    pgim = pygame.Surface(SIZE, pygame.SRCALPHA)
-    for circle in genome:
-        new_im = pygame.Surface((circle[2] * 2, circle[2] * 2), pygame.SRCALPHA)  #create a surface of size of the circle
-        color = circle[0].copy()
-        color.append(circle[3])  # #add opacity to the color argument
-        pygame.draw.circle(new_im, color, (circle[2], circle[2]), circle[2])  # #draw circle in the middle
-        pgim.blit(new_im, [circle[1][i] - circle[2] for i in range(2)])  # #blit onto main surface
-    return pygame.surfarray.array3d(pgim).astype('int16')  # #return as int16 array
 
-
-def random_genome():
-    creates a random genome
-    result = []
-    for i in range(CIRCLES):
-        pos = [random.randint(0, SIZE[0]-1), random.randint(0, SIZE[1]-1)]
-        color = [random.randint(0, 255) for i in range(3)]
-        radius = random.randint(1, 30)
-        opacity = random.randint(0,255)
-        result.append([color, pos, radius, opacity])
-    return result
-
-random_genome()
-def check_fitness(genome):
-    returns genome's fitness counted by difference in rgb values
-    genome_array = genome_to_array(genome)
-    fitness = (sum(abs(TARGET - genome_array).flat) ** 2) * -1
-    # #squared for rewarding better creatures, difference is a negative trait, hence * -1
-    return fitness
-
-
-def draw_creature(genome, scale=1, save=False):
-    pgim = pygame.Surface((SIZE[0] * scale, SIZE[1] * scale), pygame.SRCALPHA)
-    for circle in genome:  # #same as in genome_to_array
-        new_im = pygame.Surface((circle[2] * 2 * scale, circle[2] * 2 * scale), pygame.SRCALPHA)
-        color = circle[0].copy()
-        color.append(circle[3])
-        pygame.draw.circle(new_im, color, (circle[2] * scale, circle[2] * scale), circle[2] * scale)
-        pgim.blit(new_im, [(circle[1][i] - circle[2]) * scale for i in range(2)])
-    pg_stringim = pygame.image.tostring(pgim, 'RGBA')
-    im = Image.frombytes('RGBA', (SIZE[0] * scale, SIZE[1] * scale), pg_stringim)
-
-    if save:
-
-        im.save(str(int(time.time()))+".bmp", 'BMP')
-    im.show()
-
-
-def mutate(start_genome):
-    genome = deepcopy(start_genome)  # #deepcopy is necessary (apparently)
-    repeat = True
-    while repeat:
-        choice = random.randint(1, 5)  # #choose a random mutation
-        if choice == 1:  # #redefine color
-            genome[random.randint(0, CIRCLES - 1)][0] = [random.randint(0, 255) for i in range(3)]
-        elif choice == 2:  # #redefine position
-            genome[random.randint(0, CIRCLES - 1)][1] = [random.randint(0, SIZE[0] - 1),
-                                                         random.randint(0, SIZE[1] - 1)]
-        elif choice == 3:  # #redefine radius
-            genome[random.randint(0, CIRCLES - 1)][2] = random.randint(1,30)
-        elif choice == 4:  # #swap two circles on z axis
-            index1 = random.randint(0, CIRCLES-1)
-            index2 = random.randint(0, CIRCLES-1)
-            while index1 == index2:
-                index2 = random.randint(0, CIRCLES - 1)  # #generate two random indices
-            temp = genome[index1]
-            genome[index1] = genome[index2]  # #swap them
-            genome[index2] = temp
-        elif choice == 5:  # #redefine opacity
-            genome[random.randint(0, CIRCLES - 1)][3] = random.randint(0,255)
-        repeat = not random.randint(0, 9)  # #have 10% chance for another mutation
-    return genome
-"""
 
 if __name__ == '__main__':
     try:
