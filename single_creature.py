@@ -217,7 +217,7 @@ if __name__ == '__main__':
         while True:
             ans = input('n - new file \nc - continue latest creature\n')
             if ans.lower() == 'n':
-                creature = Genome(50)
+                creature = Genome(30)
                 starting_fitness = creature.fitness
                 gen = 0
                 break
