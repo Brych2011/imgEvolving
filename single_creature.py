@@ -26,9 +26,9 @@ class Color(list):
     """used for representation of color"""
 
     def __init__(self, *args):
-        if len(args) == 4:
+        if len(args) == 4:  # #round all illegal arguments
             args = list(args)
-            for i in range[4]:
+            for i in range(4):
                 if args[i] < 0:
                     args[i] = 0
                 elif args[i] > 255:
@@ -54,7 +54,7 @@ class Circle(object):
         self.__x = x
         self.__y = y
         self.__radius = radius
-        self.color = Color(color)
+        self.color = Color(*color)
 
     @property
     def x(self):
@@ -121,9 +121,11 @@ class Genome(object):
                                     random.randint(1, Genome.max_radius), Color())
                 self.genome.append(new_circle)
         else:
-            for circle in genome_list:  #TODO adapt it to Circle objects
-                circle[0] = Color(circle[0])
-            self.genome = genome_list
+            for i in genome_list:  # #genome list has syntax: [[[r,g,b,a],[x,y],radius], ....]
+                self.genome.append(Circle(i[1][0],  # #read x
+                                          i[1][1],  # #read y
+                                          i[2],  # #read radius
+                                          Color(*i[0])))  # # read color
 
         self.update_fitness()
         self.update_array()
@@ -209,7 +211,7 @@ class Genome(object):
             new_circle = []
             new_circle.append(self.genome[i].color)
             new_circle.append([self.genome[i].x, self.genome[i].y])
-            new_circle.append([self.genome[i].radius])
+            new_circle.append(self.genome[i].radius)
             result.append(new_circle)
         return result
 
@@ -250,6 +252,7 @@ if __name__ == '__main__':
                 creature = kid
                 improvements += 1
             gen += 1
+
     except KeyboardInterrupt:
         creature.draw(scale=7, save=True)
 
