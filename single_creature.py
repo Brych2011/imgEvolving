@@ -5,15 +5,8 @@ import json
 from copy import deepcopy
 import time
 
-"""
-IMAGE = Image.open('mona_lisa_small.jpg')
-IMAGE.thumbnail((90,60))
-IMAGE.save('mona_lisa_even_smaller.jpg', 'JPEG')
-TARGET = np.array(IMAGE)
-"""
 
 DEFAULT = object()
-
 
 
 class Color(list):
