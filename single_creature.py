@@ -11,13 +11,7 @@ IMAGE.thumbnail((90,60))
 IMAGE.save('mona_lisa_even_smaller.jpg', 'JPEG')
 TARGET = np.array(IMAGE)
 """
-pg_im = pygame.image.load('mona_lisa_even_smaller.jpg')   # #load target image
-TARGET = pygame.surfarray.array3d(pg_im).astype('int16')  # #convert to int16 array
-SIZE = pg_im.get_size()
-SHAPE = TARGET.shape
-print(SIZE)
-print(TARGET.shape)
-CIRCLES = 45
+
 DEFAULT = object()
 
 
@@ -100,6 +94,7 @@ class Genome(object):
     """genome with properties of given amount of circles"""
 
     pg_im = pygame.image.load('mona_lisa_even_smaller.jpg')  # #load target image
+    im_size = pg_im.get_size()
     target = pygame.surfarray.array3d(pg_im).astype('int16')  # #convert to int16 array
     target_shape = target.shape
     max_radius = 50
@@ -139,7 +134,7 @@ class Genome(object):
         return self.__fitness
 
     def update_array(self):
-        pgim = pygame.Surface(SIZE, pygame.SRCALPHA)
+        pgim = pygame.Surface(Genome.im_size, pygame.SRCALPHA)
         for circle in self.genome:
             new_im = pygame.Surface((circle.radius * 2, circle.radius * 2),
                                     pygame.SRCALPHA)  # create a surface of size of the circle
@@ -150,7 +145,7 @@ class Genome(object):
         self.__array = pygame.surfarray.array3d(pgim).astype('int16')
         
     def update_fitness(self):
-        self.__fitness = (sum(abs(TARGET - self.array).flat) ** 2) * -1
+        self.__fitness = (sum(abs(Genome.target - self.array).flat) ** 2) * -1
 
     def mutate(self):
         repeat = True
@@ -186,7 +181,7 @@ class Genome(object):
         self.update_fitness()
 
     def draw(self, scale=1, save=False):
-        pgim = pygame.Surface((SIZE[0] * scale, SIZE[1] * scale), pygame.SRCALPHA)
+        pgim = pygame.Surface((Genome.im_size[0] * scale, Genome.im_size[1] * scale), pygame.SRCALPHA)
 
         for circle in self.genome:
             new_im = pygame.Surface((circle.radius * 2 * scale, circle.radius * 2 * scale),
@@ -198,7 +193,7 @@ class Genome(object):
                                (circle.y - circle.radius) * scale])  # #blit onto main surface
 
         pg_stringim = pygame.image.tostring(pgim, 'RGBA')
-        im = Image.frombytes('RGBA', (SIZE[0] * scale, SIZE[1] * scale), pg_stringim)
+        im = Image.frombytes('RGBA', (Genome.im_size[0] * scale, Genome.im_size[1] * scale), pg_stringim)
 
         if save:
 
@@ -218,6 +213,7 @@ class Genome(object):
     @staticmethod
     def change_target(image_object):
         """change the target of all creatures. Requires pygame surface as an argument"""
+        Genome.im_size = image_object.get_size()
         Genome.target = pygame.surfarray.array3d(image_object).astype('int16')  # #convert to int16 array
         Genome.target_shape = Genome.target.shape
 
