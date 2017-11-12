@@ -4,6 +4,7 @@ import json
 from single_creature import Genome
 from copy import deepcopy
 import argparse
+import os
 
 POPULATION = 100
 MUTATION_RATE = 0.3
@@ -60,7 +61,7 @@ if __name__ == '__main__':
 
     args = vars(parser.parse_args())
 
-    try:
+    if os.path.exists(args['directory']):
         new_im = pygame.image.load('small_version.jpg')
         Genome.change_target(new_im)
         file = open('123saved_instance.json', 'r')
@@ -70,7 +71,7 @@ if __name__ == '__main__':
         for genome in save[1]:
             population.append(Genome(len(genome), genome))
 
-    except FileNotFoundError:
+    else:
         gen = 0
         population = []
         for i in range(POPULATION):
