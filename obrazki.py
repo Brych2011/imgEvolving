@@ -5,6 +5,7 @@ from single_creature import Genome
 from copy import deepcopy
 import argparse
 import os
+from PIL import Image
 
 POPULATION = 100
 MUTATION_RATE = 0.3
@@ -44,7 +45,8 @@ def breed(creature1, creature2):
 
 
 def save_population(pop):
-    file = open('123saved_instance.json', 'w')
+    name = '{}g {}c {}p.json'.format(gen, pop[0].circles, len(pop))
+    file = open(os.path.join(path, name), 'w')
     list_population = [i.get_list_representation() for i in pop]
     json.dump([gen, list_population], file)
     file.close()
@@ -54,17 +56,19 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Image evolving thing')
 
-    parser.add_argument('-i', '--image', help='specify image file. Should be smaller than 100x100 px')
+    parser.add_argument('-i', '--image', help='specify image file. Omitted if continuing')
     parser.add_argument('-d', '--directory', help='specify directory for saving population', required=True)
     parser.add_argument('-c', '--circles', help='amount of circles on a picture. Omitted if continuing')
     parser.add_argument('-p', '--population', help='specify size of the population. Omitted if continuing')
 
     args = vars(parser.parse_args())
 
-    if os.path.exists(args['directory']):
-        new_im = pygame.image.load('small_version.jpg')
+    path = args['directory']
+    if os.path.exists(path):
+        new_im = pygame.image.load(os.path.join(path, 'target.bmp'))
         Genome.change_target(new_im)
-        file = open('123saved_instance.json', 'r')
+        file_list = sorted([f for f in os.listdir(path) if f.endswith('.json')])
+        file = open(file_list[-1], 'r')
         save = json.load(file)
         gen = save[0]
         population = []
@@ -72,6 +76,16 @@ if __name__ == '__main__':
             population.append(Genome(len(genome), genome))
 
     else:
+        os.makedirs(path)
+
+        chosen_image = Image.open(args['image'])
+        chosen_image.save(os.path.join(path, 'original.' + chosen_image.format.lower()))
+        chosen_image.thumbnail((90, 90))
+
+        chosen_image.save(os.path.join(path, 'target.bmp'), 'BMP')
+
+        Genome.change_target(chosen_image)
+
         gen = 0
         population = []
         for i in range(POPULATION):
@@ -82,9 +96,9 @@ if __name__ == '__main__':
             sorted_pop = sort_population(population)
             population = next_gen(sorted_pop)
             gen += 1
-            if gen % 50 == 0:
+            if gen % 5 == 0:
                 print(gen, population[0].fitness)
-                if gen % 500 == 0:
+                if gen % 50 == 0:
                     save_population(population)
 
     except KeyboardInterrupt:
