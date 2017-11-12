@@ -1,13 +1,12 @@
 import pygame
-from PIL import Image
-import numpy as np
 import random
 import json
 from single_creature import Genome
 from copy import deepcopy
+import argparse
 
-POPULATION = 16
-MUTATION_RATE = 0.1
+POPULATION = 100
+MUTATION_RATE = 0.3
 
 
 def sort_population(pop):
@@ -44,15 +43,27 @@ def breed(creature1, creature2):
 
 
 def save_population(pop):
-    file = open('saved_instance.json', 'w')
+    file = open('123saved_instance.json', 'w')
     list_population = [i.get_list_representation() for i in pop]
     json.dump([gen, list_population], file)
     file.close()
 
 
 if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser(description='Image evolving thing')
+
+    parser.add_argument('-i', '--image', help='specify image file. Should be smaller than 100x100 px')
+    parser.add_argument('-d', '--directory', help='specify directory for saving population', required=True)
+    parser.add_argument('-c', '--circles', help='amount of circles on a picture. Omitted if continuing')
+    parser.add_argument('-p', '--population', help='specify size of the population. Omitted if continuing')
+
+    args = vars(parser.parse_args())
+
     try:
-        file = open('saved_instance.json', 'r')
+        new_im = pygame.image.load('small_version.jpg')
+        Genome.change_target(new_im)
+        file = open('123saved_instance.json', 'r')
         save = json.load(file)
         gen = save[0]
         population = []
@@ -63,19 +74,19 @@ if __name__ == '__main__':
         gen = 0
         population = []
         for i in range(POPULATION):
-            population.append(Genome(25))
+            population.append(Genome(80))
 
     try:
         while True:
             sorted_pop = sort_population(population)
             population = next_gen(sorted_pop)
             gen += 1
-            if gen % 200 == 0:
+            if gen % 50 == 0:
                 print(gen, population[0].fitness)
-                if gen % 1000 == 0:
+                if gen % 500 == 0:
                     save_population(population)
 
     except KeyboardInterrupt:
-        population[0].draw(scale=7, save=True)
+        population[0].draw(scale=15, save=True)
         save_population(population)
 
