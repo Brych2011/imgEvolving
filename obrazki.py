@@ -58,8 +58,8 @@ if __name__ == '__main__':
 
     parser.add_argument('-i', '--image', help='specify image file. Omitted if continuing')
     parser.add_argument('-d', '--directory', help='specify directory for saving population', required=True)
-    parser.add_argument('-c', '--circles', help='amount of circles on a picture. Omitted if continuing')
-    parser.add_argument('-p', '--population', help='specify size of the population. Omitted if continuing')
+    parser.add_argument('-c', '--circles', help='amount of circles on a picture. Omitted if continuing', type=int)
+    parser.add_argument('-p', '--population', help='specify size of the population. Omitted if continuing', type=int)
 
     args = vars(parser.parse_args())
 
@@ -67,8 +67,9 @@ if __name__ == '__main__':
     if os.path.exists(path):
         new_im = pygame.image.load(os.path.join(path, 'target.bmp'))
         Genome.change_target(new_im)
-        file_list = sorted([f for f in os.listdir(path) if f.endswith('.json')])
-        file = open(file_list[-1], 'r')
+        file_list = [f for f in os.listdir(path) if f.endswith('.json')]
+        sorted_file_list = sorted(file_list, key=lambda file_list: int(file_list[:file_list.find('g')]))
+        file = open(os.path.join(path, sorted_file_list[-1]), 'r')
         save = json.load(file)
         gen = save[0]
         population = []
@@ -88,20 +89,20 @@ if __name__ == '__main__':
 
         gen = 0
         population = []
-        for i in range(POPULATION):
-            population.append(Genome(80))
+        for i in range(args['population']):
+            population.append(Genome(args['circles']))
 
     try:
         while True:
             sorted_pop = sort_population(population)
             population = next_gen(sorted_pop)
             gen += 1
-            if gen % 5 == 0:
+            if gen % 20 == 0:
                 print(gen, population[0].fitness)
-                if gen % 50 == 0:
+                if gen % 200 == 0:
                     save_population(population)
 
     except KeyboardInterrupt:
-        population[0].draw(scale=15, save=True)
+        population[0].draw(scale=7, save=True, path=path, name='ziemniaki.bmp')
         save_population(population)
 

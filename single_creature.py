@@ -5,6 +5,7 @@ import json
 from copy import deepcopy
 import time
 import numpy as np
+import os
 
 
 DEFAULT = object()
@@ -174,7 +175,7 @@ class Genome(object):
         self.update_array()
         self.update_fitness()
 
-    def draw(self, scale=1, save=False):
+    def draw(self, scale=1, save=False, path='./', name = DEFAULT):
         pgim = pygame.Surface((Genome.im_size[0] * scale, Genome.im_size[1] * scale), pygame.SRCALPHA)
 
         for circle in self.genome:
@@ -190,8 +191,10 @@ class Genome(object):
         im = Image.frombytes('RGBA', (Genome.im_size[0] * scale, Genome.im_size[1] * scale), pg_stringim)
 
         if save:
-
-            im.save(str(int(time.time()))+".bmp", 'BMP')
+            if name == DEFAULT:
+                name = str(int(time.time())) + ".bmp"
+            final_name = os.path.join(path, name)
+            im.save(final_name, 'BMP')
         im.show()
 
     def get_list_representation(self):
