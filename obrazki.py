@@ -58,7 +58,7 @@ if __name__ == '__main__':
 
     parser.add_argument('-i', '--image', help='specify image file. Omitted if continuing')
     parser.add_argument('-d', '--directory', help='specify directory for saving population', required=True)
-    parser.add_argument('-c', '--circles', help='amount of circles on a picture. Omitted if continuing', type=int)
+    parser.add_argument('-c', '--circles', help='max amount of circles on a picture. Omitted if continuing', type=int)
     parser.add_argument('-p', '--population', help='specify size of the population. Omitted if continuing', type=int)
 
     args = vars(parser.parse_args())
@@ -90,17 +90,20 @@ if __name__ == '__main__':
         gen = 0
         population = []
         for i in range(args['population']):
-            population.append(Genome(args['circles']))
+            population.append(Genome(3))
 
     try:
+        max_fitness = abs(population[0].fitness)
         while True:
             sorted_pop = sort_population(population)
             population = next_gen(sorted_pop)
             gen += 1
             if gen % 100 == 0:
                 print(gen, population[0].fitness)
-                if gen % 100 == 0:
+                if gen % 1000 == 0:
+                    print("\n ATTENTION: PERCENTAGE OF IMPROVEMENT FOR LAST 1000 GENS IS: {}\n".format(max_fitness / abs(population[0].fitness)))
                     save_population(population)
+                    max_fitness = abs(population[0].fitness)
 
     except KeyboardInterrupt:
         population[0].draw(scale=7, save=True, path=path, name='ziemniaki.bmp')
