@@ -97,9 +97,9 @@ if __name__ == '__main__':
             sorted_pop = sort_population(population)
             population = next_gen(sorted_pop)
             gen += 1
-            if gen % 20 == 0:
+            if gen % 100 == 0:
                 print(gen, population[0].fitness)
-                if gen % 200 == 0:
+                if gen % 100 == 0:
                     save_population(population)
 
     except KeyboardInterrupt:
