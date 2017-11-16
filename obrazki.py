@@ -101,7 +101,7 @@ if __name__ == '__main__':
             if gen % 50 == 0:
                 print(gen, population[0].fitness, population[0].circles)
                 if gen % 200 == 0:
-                    if (population[0].fitness - max_fitness) / abs(max_fitness) < 0.02 and population[0].circles <= args['circles']:
+                    if (population[0].fitness - max_fitness) / abs(max_fitness) < 0.01 and population[0].circles <= args['circles']:
                         for i in population:
                             i.genome.append(Circle(random.randint(0 - Genome.legal_border, Genome.target_shape[1] + Genome.legal_border),  # #x
                                             random.randint(0 - Genome.legal_border, Genome.target_shape[0] + Genome.legal_border),  # #y
