@@ -1,7 +1,7 @@
 import pygame
 import random
 import json
-from single_creature import Genome
+from single_creature import Genome, Circle, Color
 from copy import deepcopy
 import argparse
 import os
@@ -93,17 +93,22 @@ if __name__ == '__main__':
             population.append(Genome(3))
 
     try:
-        max_fitness = abs(population[0].fitness)
+        max_fitness = population[0].fitness
         while True:
             sorted_pop = sort_population(population)
             population = next_gen(sorted_pop)
             gen += 1
-            if gen % 100 == 0:
-                print(gen, population[0].fitness)
-                if gen % 1000 == 0:
-                    print("\n ATTENTION: PERCENTAGE OF IMPROVEMENT FOR LAST 1000 GENS IS: {}\n".format(max_fitness / abs(population[0].fitness)))
+            if gen % 50 == 0:
+                print(gen, population[0].fitness, population[0].circles)
+                if gen % 200 == 0:
+                    if (population[0].fitness - max_fitness) / abs(max_fitness) < 0.02 and population[0].circles <= args['circles']:
+                        for i in population:
+                            i.genome.append(Circle(random.randint(0 - Genome.legal_border, Genome.target_shape[1] + Genome.legal_border),  # #x
+                                            random.randint(0 - Genome.legal_border, Genome.target_shape[0] + Genome.legal_border),  # #y
+                                            random.randint(1, Genome.max_radius), Color()))
+                            i.circles += 1
                     save_population(population)
-                    max_fitness = abs(population[0].fitness)
+                    max_fitness = population[0].fitness
 
     except KeyboardInterrupt:
         population[0].draw(scale=7, save=True, path=path, name='ziemniaki.bmp')
