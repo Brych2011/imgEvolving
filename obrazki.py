@@ -7,7 +7,6 @@ import argparse
 import os
 from PIL import Image
 
-POPULATION = 100
 MUTATION_RATE = 0.3
 
 
@@ -20,27 +19,32 @@ def next_gen(sorted_pop):
     new_pop = []
     breedable = sorted_pop[:len(sorted_pop)//2]
     new_pop.extend(breedable)
-    for i in range(0, len(breedable)):
-        kid = deepcopy(breedable[i])
-        kid.mutate()
-        new_pop.append(kid)
+    for i in range(0, len(breedable), 2):
+        kid1, kid2 = breed(breedable[i], breedable[i+1])
+        new_pop.extend((kid1, kid2))
     return new_pop
 
 
 def breed(creature1, creature2):
     kid1, kid2 = deepcopy(creature1), deepcopy(creature2)
+
     for i in range(kid1.circles):
         if random.randint(0, 1):
-            kid1.genome[i] = creature2.genome[1]
-    if random.randint(1,1000) < 1000 * MUTATION_RATE:
+            kid1.genome[i] = deepcopy(creature2.genome[i])
+    if random.randint(1, 1000) < 1000 * MUTATION_RATE:
         kid1.mutate()
+    else:
+        kid1.update_array()
+        kid1.update_fitness()
 
     for i in range(kid2.circles):
         if random.randint(0, 1):
-            kid2.genome[i] = creature1.genome[1]
+            kid2.genome[i] = deepcopy(creature1.genome[i])
     if random.randint(1, 1000) < 1000 * MUTATION_RATE:
         kid2.mutate()
-
+    else:
+        kid2.update_array()
+        kid2.update_fitness()
     return kid1, kid2
 
 
