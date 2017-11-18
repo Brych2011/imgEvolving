@@ -1,7 +1,7 @@
 import pygame
 import random
 import json
-from single_creature import Genome
+from single_creature import Genome, Circle, Color
 from copy import deepcopy
 import argparse
 import os
@@ -58,7 +58,7 @@ if __name__ == '__main__':
 
     parser.add_argument('-i', '--image', help='specify image file. Omitted if continuing')
     parser.add_argument('-d', '--directory', help='specify directory for saving population', required=True)
-    parser.add_argument('-c', '--circles', help='amount of circles on a picture. Omitted if continuing', type=int)
+    parser.add_argument('-c', '--circles', help='max amount of circles on a picture. Omitted if continuing', type=int)
     parser.add_argument('-p', '--population', help='specify size of the population. Omitted if continuing', type=int)
 
     args = vars(parser.parse_args())
@@ -90,17 +90,25 @@ if __name__ == '__main__':
         gen = 0
         population = []
         for i in range(args['population']):
-            population.append(Genome(args['circles']))
+            population.append(Genome(3))
 
     try:
+        max_fitness = population[0].fitness
         while True:
             sorted_pop = sort_population(population)
             population = next_gen(sorted_pop)
             gen += 1
-            if gen % 100 == 0:
-                print(gen, population[0].fitness)
-                if gen % 100 == 0:
+            if gen % 50 == 0:
+                print(gen, population[0].fitness, population[0].circles)
+                if gen % 200 == 0:
+                    if (population[0].fitness - max_fitness) / abs(max_fitness) < 0.01 and population[0].circles <= args['circles']:
+                        for i in population:
+                            i.genome.append(Circle(random.randint(0 - Genome.legal_border, Genome.target_shape[1] + Genome.legal_border),  # #x
+                                            random.randint(0 - Genome.legal_border, Genome.target_shape[0] + Genome.legal_border),  # #y
+                                            random.randint(1, Genome.max_radius), Color()))
+                            i.circles += 1
                     save_population(population)
+                    max_fitness = population[0].fitness
 
     except KeyboardInterrupt:
         population[0].draw(scale=7, save=True, path=path, name='ziemniaki.bmp')
