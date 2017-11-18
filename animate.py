@@ -26,7 +26,7 @@ for i in sorted_file_list:
     try:
         gen, population = json.load(file)
     except json.JSONDecodeError:
-        print(i)
+        print('unreadable file:'i)
     creature = population[0]
 
     pgim = pygame.Surface((target_im.size[0] * scale, target_im.size[1] * scale), pygame.SRCALPHA)

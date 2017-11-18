@@ -4,6 +4,8 @@ import random
 import json
 from copy import deepcopy
 import time
+import numpy as np
+import os
 
 
 DEFAULT = object()
@@ -136,7 +138,7 @@ class Genome(object):
                                circle.radius)  # #draw circle in the middle of its Surface
             pgim.blit(new_im, [circle.x - circle.radius, circle.y - circle.radius])  # #blit onto main surface
         self.__array = pygame.surfarray.array3d(pgim).astype('int16')
-        
+
     def update_fitness(self):
         self.__fitness = (sum(abs(Genome.target - self.array).flat) ** 2) * -1
 
@@ -168,12 +170,12 @@ class Genome(object):
 
             elif choice == 5:  # #redefine opacity
                 self.genome[random.randrange(0, self.circles)].color[3] = random.randint(0, 255)
-            repeat = not random.randint(0, 9)  # #have 10% chance for another mutation
+            repeat = not random.randint(0, 3)  # #have 25% chance for another mutation
 
         self.update_array()
         self.update_fitness()
 
-    def draw(self, scale=1, save=False):
+    def draw(self, scale=1, save=False, path='./', name = DEFAULT):
         pgim = pygame.Surface((Genome.im_size[0] * scale, Genome.im_size[1] * scale), pygame.SRCALPHA)
 
         for circle in self.genome:
@@ -189,8 +191,10 @@ class Genome(object):
         im = Image.frombytes('RGBA', (Genome.im_size[0] * scale, Genome.im_size[1] * scale), pg_stringim)
 
         if save:
-
-            im.save(str(int(time.time()))+".bmp", 'BMP')
+            if name == DEFAULT:
+                name = str(int(time.time())) + ".bmp"
+            final_name = os.path.join(path, name)
+            im.save(final_name, 'BMP')
         im.show()
 
     def get_list_representation(self):
@@ -206,18 +210,31 @@ class Genome(object):
     @staticmethod
     def change_target(image_object):
         """change the target of all creatures. Requires pygame surface as an argument"""
-        Genome.im_size = image_object.get_size()
-        Genome.target = pygame.surfarray.array3d(image_object).astype('int16')  # #convert to int16 array
-        Genome.target_shape = Genome.target.shape
+        if isinstance(image_object, pygame.Surface):
+            Genome.im_size = image_object.get_size()
+            Genome.target = pygame.surfarray.array3d(image_object).astype('int16')  # #convert to int16 array
+            Genome.target_shape = Genome.target.shape
+        elif isinstance(image_object, Image.Image):
+            mode = image_object.mode
+            size = image_object.size
+            data = image_object.tobytes()
+            image_object = pygame.image.fromstring(data, size, mode)
+            Genome.im_size = image_object.get_size()
+            Genome.target = pygame.surfarray.array3d(image_object).astype('int16')  # #convert to int16 array
+            Genome.target_shape = Genome.target.shape
+        else:
+            raise IOError('Image type can only be pygame.Surface of Image.Image')
 
 
 if __name__ == '__main__':
     try:
         improvements = 0
+        new_im = pygame.image.load('small_version.jpg')
+        Genome.change_target(new_im)
         while True:
             ans = input('n - new file \nc - continue latest creature\n')
             if ans.lower() == 'n':
-                creature = Genome(30)
+                creature = Genome(70)
                 starting_fitness = creature.fitness
                 gen = 0
                 break
@@ -243,7 +260,7 @@ if __name__ == '__main__':
             gen += 1
 
     except KeyboardInterrupt:
-        creature.draw(scale=7, save=True)
+        creature.draw(scale=15, save=True)
 
         name = str('saved_instance' + str(int(time.time())))
         print(name)
