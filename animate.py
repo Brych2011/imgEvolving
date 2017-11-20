@@ -44,4 +44,4 @@ for i in sorted_file_list:
     im = Image.frombytes('RGB', (target_im.size[0] * scale, target_im.size[1] * scale), pg_stringim)
     image_list.append(np.array(im))
 
-imageio.mimsave(os.path.join(path, 'animation.gif'), image_list)
+imageio.mimsave(os.path.join(path, 'animation.gif'), image_list, loop=1, fps='5')
