@@ -187,8 +187,8 @@ class Genome(object):
             pgim.blit(new_im, [(circle.x - circle.radius) * scale,
                                (circle.y - circle.radius) * scale])  # #blit onto main surface
 
-        pg_stringim = pygame.image.tostring(pgim, 'RGBA')
-        im = Image.frombytes('RGBA', (Genome.im_size[0] * scale, Genome.im_size[1] * scale), pg_stringim)
+        pg_stringim = pygame.image.tostring(pgim, 'RGB')
+        im = Image.frombytes('RGB', (Genome.im_size[0] * scale, Genome.im_size[1] * scale), pg_stringim)
 
         if save:
             if name == DEFAULT:
