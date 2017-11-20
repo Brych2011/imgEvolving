@@ -251,6 +251,8 @@ if __name__ == '__main__':
                 print(gen, creature.fitness)  # #check progress every 500 gens
             kid = deepcopy(creature)  # #create a mutated kid
             kid.mutate()
+            kid.update_array()
+            kid.update_fitness()
             if creature.fitness < kid.fitness:  # #replace genome if mutation if beneficial
                 creature = kid
                 improvements += 1

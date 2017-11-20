@@ -6,6 +6,7 @@ from copy import deepcopy
 import argparse
 import os
 from PIL import Image
+import multiprocessing
 
 MUTATION_RATE = 0.3
 
@@ -57,6 +58,7 @@ def save_population(pop):
 
 
 if __name__ == '__main__':
+    pool = multiprocessing.Pool(4)
 
     parser = argparse.ArgumentParser(description='Image evolving thing')
 
