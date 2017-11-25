@@ -4,7 +4,6 @@ import random
 import json
 from copy import deepcopy
 import time
-import numpy as np
 import os
 
 
@@ -24,11 +23,11 @@ class Color(list):
                     args[i] = 255
             list.__init__(self, args)
 
-        else:
+        else:  # #init with random values if not specified
             list.__init__(self, [random.randint(0, 255) for i in range(4)])
 
     def __setitem__(self, key, value):
-        if value > 255:
+        if value > 255:  # #round illegal values
             list.__setitem__(self, key, 255)
         elif value < 0:
             list.__setitem__(self, key, 0)
@@ -43,14 +42,14 @@ class Circle(object):
         self.__x = x
         self.__y = y
         self.__radius = radius
-        self.color = Color(*color)
+        self.color = Color(*color)  # #init Color object
 
     @property
     def x(self):
         return self.__x
 
     @x.setter
-    def x(self, value):
+    def x(self, value):  # #force x to be within certain range
         if value < 0 - Genome.legal_border:
             self.__x = 0 - Genome.legal_border
         elif value > Genome.target_shape[1] + Genome.legal_border:
@@ -63,7 +62,7 @@ class Circle(object):
         return self.__y
 
     @y.setter
-    def y(self, value):
+    def y(self, value):  # #force y to be within certain range
         if value < 0 - Genome.legal_border:
             self.__y = 0 - Genome.legal_border
         elif value > Genome.target_shape[0] + Genome.legal_border:
@@ -76,7 +75,7 @@ class Circle(object):
         return self.__radius
 
     @radius.setter
-    def radius(self, value):
+    def radius(self, value):  # #round illegal values
         if value < 1:
             self.__radius = 1
         elif value > Genome.max_radius:
@@ -88,6 +87,7 @@ class Circle(object):
 class Genome(object):
     """genome with properties of given amount of circles"""
 
+    # init default settings, can be changed via change_target() method
     pg_im = pygame.image.load('mona_lisa_even_smaller.jpg')  # #load target image
     im_size = pg_im.get_size()
     target = pygame.surfarray.array3d(pg_im).astype('int16')  # #convert to int16 array
@@ -104,8 +104,8 @@ class Genome(object):
         self.update_array()
 
         self.size = Genome.target.shape
-        if genome_list == DEFAULT:
-            for i in range(circles):
+        if genome_list == DEFAULT:  # if source list of a genome was not specified
+            for i in range(circles):  # Generate new one with random circles
                 new_circle = Circle(random.randint(0 - Genome.legal_border, Genome.target_shape[1] + Genome.legal_border),  # #x
                                     random.randint(0 - Genome.legal_border, Genome.target_shape[0] + Genome.legal_border),  # #y
                                     random.randint(1, Genome.max_radius), Color())
@@ -129,6 +129,8 @@ class Genome(object):
         return self.__fitness
 
     def update_array(self):
+        """Method updating the array representation of an image. Should be called after every change,
+        along with update_fitness() method"""
         pgim = pygame.Surface(Genome.im_size, pygame.SRCALPHA)
         for circle in self.genome:
             new_im = pygame.Surface((circle.radius * 2, circle.radius * 2),
@@ -140,7 +142,12 @@ class Genome(object):
         self.__array = pygame.surfarray.array3d(pgim).astype('int16')
 
     def update_fitness(self):
+        """Method calculating genome's fitness. Should be called after every change, after update_array()"""
+
         self.__fitness = (sum(abs(Genome.target - self.array).flat) ** 2) * -1
+        """Difference is calculated as array of absolute values of results of subtracktions. It is then flatted and
+           summed. Result is squared for faster evolution and multiplied by -1, as difference from target is a
+           negative trait"""
 
     def mutate(self):
         repeat = True
@@ -173,6 +180,7 @@ class Genome(object):
             repeat = not random.randint(0, 3)  # #have 25% chance for another mutation
 
     def draw(self, scale=1, show=False, save=False, path='./', name = DEFAULT):
+        """Method used for rendering genome's image and showing it or saving"""
         pgim = pygame.Surface((Genome.im_size[0] * scale, Genome.im_size[1] * scale), pygame.SRCALPHA)
 
         for circle in self.genome:
@@ -184,7 +192,7 @@ class Genome(object):
             pgim.blit(new_im, [(circle.x - circle.radius) * scale,
                                (circle.y - circle.radius) * scale])  # #blit onto main surface
 
-        pg_stringim = pygame.image.tostring(pgim, 'RGB')
+        pg_stringim = pygame.image.tostring(pgim, 'RGB')  # transform into PIL.Image for .show() method
         im = Image.frombytes('RGB', (Genome.im_size[0] * scale, Genome.im_size[1] * scale), pg_stringim)
 
         if save:
@@ -196,12 +204,13 @@ class Genome(object):
             im.show()
 
     def get_list_representation(self):
+        """Used to generate list representation ready to save with json"""
         result = []
         for i in range(self.circles):
             new_circle = []
             new_circle.append(self.genome[i].color)
             new_circle.append([self.genome[i].x, self.genome[i].y])
-            new_circle.append(self.genome[i].radius)
+            new_circle.append(self.genome[i].radius)  # Same list syntax as in __init__()
             result.append(new_circle)
         return result
 
@@ -274,19 +283,4 @@ if __name__ == '__main__':
         print('improved {} times'.format(improvements))
         print('starting {}'.format(starting_fitness))
         print('end      {}'.format(creature.fitness))
-    """
-    show_fitness_errors(creature)
-    w,h,d = TARGET.shape
-    print(tuple(np.average(TARGET.reshape(w*h, d), axis=0)))
-    test = [[[85,72,53], [30, 20], 200, 255]]
-    test2 = [[[255,255,255], [45,30], 90, 255]]
-    print('creature: {}'.format(check_fitness(creature)))
-    print('average:  {}'.format(check_fitness(test)))
-    print('aberage2: {}'.format(check_fitness3(test)))
-    print('white:    {}'.format(check_fitness(test2)))
-    draw_creature(test)
-    draw_creature(creature)
-    """
-
-
 
