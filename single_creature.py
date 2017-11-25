@@ -172,7 +172,7 @@ class Genome(object):
                 self.genome[random.randrange(0, self.circles)].color[3] = random.randint(0, 255)
             repeat = not random.randint(0, 3)  # #have 25% chance for another mutation
 
-    def draw(self, scale=1, save=False, path='./', name = DEFAULT):
+    def draw(self, scale=1, show=False, save=False, path='./', name = DEFAULT):
         pgim = pygame.Surface((Genome.im_size[0] * scale, Genome.im_size[1] * scale), pygame.SRCALPHA)
 
         for circle in self.genome:
@@ -192,7 +192,8 @@ class Genome(object):
                 name = str(int(time.time())) + ".bmp"
             final_name = os.path.join(path, name)
             im.save(final_name, 'BMP')
-        im.show()
+        if show:
+            im.show()
 
     def get_list_representation(self):
         result = []

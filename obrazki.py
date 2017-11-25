@@ -23,14 +23,12 @@ def next_gen(sorted_pop):
     kids = list(pool.map(breed, breedable))
 
     for thing in breedable, kids:
-        print('next gen: {}'.format(thing[0].genome.shape))
         for i in thing:
             new_pop.extend(i)
     return new_pop
 
 
 def breed(tuple_creatures):
-    print(multiprocessing.current_process(), Genome.target_shape)
     creature1, creature2 = tuple_creatures
     kid1, kid2 = deepcopy(creature1), deepcopy(creature2)
 
@@ -57,10 +55,8 @@ def breed(tuple_creatures):
 def count_difference(pop):
     max_difference = len(pop[0].array.flat) * 255
     differences = []
-    for i in pop:
-        print(i.array.shape)
-    for i in range(0, len(pop) - 1):
-        dif = sum(abs(pop[i].array - pop[i+1].array).flat)
+    for i in range(1, len(pop)):
+        dif = sum(abs(pop[0].array - pop[i].array).flat)
         differences.append(dif)
     return (sum(differences)/len(differences))/max_difference
 
@@ -93,6 +89,8 @@ if __name__ == '__main__':
         new_im = pygame.image.load(os.path.join(path, 'target.bmp'))
 
         pool = multiprocessing.Pool(processes=4, initializer=init_worker, initargs=(new_im,))
+        Genome.change_target(new_im)
+
         file_list = [f for f in os.listdir(path) if f.endswith('.json')]
         sorted_file_list = sorted(file_list, key=lambda file_list: int(file_list[:file_list.find('g')]))
         file = open(os.path.join(path, sorted_file_list[-1]), 'r')
@@ -112,6 +110,7 @@ if __name__ == '__main__':
         chosen_image.save(os.path.join(path, 'target.bmp'), 'BMP')
 
         pool = multiprocessing.Pool(processes=4, initializer=init_worker, initargs=(chosen_image,))
+        Genome.change_target(chosen_image)
 
         gen = 0
         population = []
@@ -124,12 +123,12 @@ if __name__ == '__main__':
             sorted_pop = sort_population(population)
             population = next_gen(sorted_pop)
             gen += 1
-            if gen % 50 == 5:
-                print('generation: {:<6} best fitness: {:<11} difference: {:5.5f}% with {} circles'.format(gen,
-                                                                                                           population[0].fitness,
-                                                                                                           count_difference(population) * 100,
-                                                                                                           population[0].circles))
-            if gen % 200 == 4:
+            if gen % 50 == 1:
+                print('generation: {:<6} best fitness: {:<11} '
+                      'difference: {:5.5f}% with {} circles'.format(gen, population[0].fitness,
+                                                                    count_difference(population) * 100,
+                                                                    population[0].circles))
+            if gen % 200 == 0:
                 if (population[0].fitness - max_fitness) / abs(max_fitness) < 0.01 and population[0].circles <= args['circles']:
                     for i in population:
                         new_circle = Circle(random.randint(0 - Genome.legal_border, Genome.target_shape[1] + Genome.legal_border),  # #x
