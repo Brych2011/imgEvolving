@@ -6,6 +6,7 @@ from copy import deepcopy
 import argparse
 import os
 from PIL import Image
+import multiprocessing
 
 MUTATION_RATE = 0.3
 
@@ -17,15 +18,18 @@ def sort_population(pop):
 
 def next_gen(sorted_pop):
     new_pop = []
-    breedable = sorted_pop[:len(sorted_pop)//2]
-    new_pop.extend(breedable)
-    for i in range(0, len(breedable), 2):
-        kid1, kid2 = breed(breedable[i], breedable[i+1])
-        new_pop.extend((kid1, kid2))
+    breedable = [(sorted_pop[i], sorted_pop[i+1]) for i in range(0, len(sorted_pop)//2, 2)]
+
+    kids = list(pool.map(breed, breedable))
+
+    for thing in breedable, kids:
+        for i in thing:
+            new_pop.extend(i)
     return new_pop
 
 
-def breed(creature1, creature2):
+def breed(tuple_creatures):
+    creature1, creature2 = tuple_creatures
     kid1, kid2 = deepcopy(creature1), deepcopy(creature2)
 
     for i in range(kid1.circles):
@@ -33,19 +37,32 @@ def breed(creature1, creature2):
             kid1.genome[i] = deepcopy(creature2.genome[i])
     if random.randint(1, 1000) < 1000 * MUTATION_RATE:
         kid1.mutate()
-    else:
-        kid1.update_array()
-        kid1.update_fitness()
+
+    kid1.update_array()
+    kid1.update_fitness()
 
     for i in range(kid2.circles):
         if random.randint(0, 1):
             kid2.genome[i] = deepcopy(creature1.genome[i])
     if random.randint(1, 1000) < 1000 * MUTATION_RATE:
         kid2.mutate()
-    else:
-        kid2.update_array()
-        kid2.update_fitness()
+
+    kid2.update_array()
+    kid2.update_fitness()
     return kid1, kid2
+
+
+def count_difference(pop):
+    max_difference = len(pop[0].array.flat) * 255
+    differences = []
+    for i in range(1, len(pop)):
+        dif = sum(abs(pop[0].array - pop[i].array).flat)
+        differences.append(dif)
+    return (sum(differences)/len(differences))/max_difference
+
+
+def init_worker(img):
+    Genome.change_target(img)
 
 
 def save_population(pop):
@@ -70,7 +87,10 @@ if __name__ == '__main__':
     path = args['directory']
     if os.path.exists(path):
         new_im = pygame.image.load(os.path.join(path, 'target.bmp'))
+
+        pool = multiprocessing.Pool(processes=4, initializer=init_worker, initargs=(new_im,))
         Genome.change_target(new_im)
+
         file_list = [f for f in os.listdir(path) if f.endswith('.json')]
         sorted_file_list = sorted(file_list, key=lambda file_list: int(file_list[:file_list.find('g')]))
         file = open(os.path.join(path, sorted_file_list[-1]), 'r')
@@ -89,6 +109,7 @@ if __name__ == '__main__':
 
         chosen_image.save(os.path.join(path, 'target.bmp'), 'BMP')
 
+        pool = multiprocessing.Pool(processes=4, initializer=init_worker, initargs=(chosen_image,))
         Genome.change_target(chosen_image)
 
         gen = 0
@@ -102,19 +123,23 @@ if __name__ == '__main__':
             sorted_pop = sort_population(population)
             population = next_gen(sorted_pop)
             gen += 1
-            if gen % 50 == 0:
-                print(gen, population[0].fitness, population[0].circles)
-                if gen % 200 == 0:
-                    if (population[0].fitness - max_fitness) / abs(max_fitness) < 0.05 and population[0].circles <= args['circles']:
-                        for i in population:
-                            i.genome.append(Circle(random.randint(0 - Genome.legal_border, Genome.target_shape[1] + Genome.legal_border),  # #x
+            if gen % 50 == 1:
+                print('generation: {:<6} best fitness: {:<11} '
+                      'difference: {:5.5f}% with {} circles'.format(gen, population[0].fitness,
+                                                                    count_difference(population) * 100,
+                                                                    population[0].circles))
+            if gen % 200 == 0:
+                if (population[0].fitness - max_fitness) / abs(max_fitness) < 0.01 and population[0].circles <= args['circles']:
+                    for i in population:
+                        new_circle = Circle(random.randint(0 - Genome.legal_border, Genome.target_shape[1] + Genome.legal_border),  # #x
                                             random.randint(0 - Genome.legal_border, Genome.target_shape[0] + Genome.legal_border),  # #y
-                                            random.randint(1, Genome.max_radius), Color()))
-                            i.circles += 1
-                            i.update_array()
-                            i.update_fitness()
-                    save_population(population)
-                    max_fitness = population[0].fitness
+                                            random.randint(1, Genome.max_radius), Color())
+                        i.genome.insert(random.randint(0, i.circles), new_circle)
+                        i.circles += 1
+                        i.update_array()
+                        i.update_fitness()
+                save_population(population)
+                max_fitness = population[0].fitness
 
     except KeyboardInterrupt:
         population[0].draw(scale=7, save=True, path=path, name='ziemniaki.bmp')
