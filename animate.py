@@ -10,9 +10,13 @@ parser = argparse.ArgumentParser(description='Create GIF images based on best cr
 
 parser.add_argument('-d', '--directory', help='Save directory path path')
 parser.add_argument('-s', '--scale', help='Scale of result GIF', type=int)
+parser.add_argument('-f', '--fps', help='Determine FPS. Default 10', type=int)
 
 args = vars(parser.parse_args())
 scale = args['scale']
+
+if not args['fps']:
+    args['fps'] = 10
 
 path = args['directory']
 file_list = [f for f in os.listdir(path) if f.endswith('.json')]
@@ -44,4 +48,4 @@ for i in sorted_file_list:
     im = Image.frombytes('RGB', (target_im.size[0] * scale, target_im.size[1] * scale), pg_stringim)
     image_list.append(np.array(im))
 
-imageio.mimsave(os.path.join(path, 'animation.gif'), image_list, loop=1, fps='5')
+imageio.mimsave(os.path.join(path, 'animation.gif'), image_list, loop=1, fps=args['fps'])

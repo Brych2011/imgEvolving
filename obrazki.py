@@ -7,35 +7,52 @@ import argparse
 import os
 from PIL import Image
 import multiprocessing
+import math
 
 MUTATION_RATE = 0.3
+ZERO_WILDCARD_GEN = 40000  # Useless right now
+T_CHANGE = 0.9997
+START_T = 10
 
 
-def sort_population(pop):
+def get_wildcards_ratio(temperature):
+    return math.exp(-1/temperature)
+
+
+def get_mutation_rate(temperature):
+    return math.exp(-1/temperature) + 0.1
+
+
+def sort_population(pop, temperature):
     temp = [(i, i.fitness) for i in pop]
-    return [i[0] for i in sorted(temp, key=lambda temp: temp[1] * -1)]
+    sorted_temp = [i[0] for i in sorted(temp, key=lambda temp: temp[1] * -1)]
+    for i in range(len(sorted_temp)):
+        if random.randrange(0, 1000) < 1000 * get_wildcards_ratio(temperature):
+            sorted_temp.insert(1, sorted_temp.pop(i))
+    return sorted_temp
 
 
 def next_gen(sorted_pop):
     new_pop = []
-    breedable = [(sorted_pop[i], sorted_pop[i+1]) for i in range(0, len(sorted_pop)//2, 2)]
+    breedable = [(sorted_pop[i], sorted_pop[i+1], T) for i in range(0, len(sorted_pop)//2, 2)]
 
     kids = list(pool.map(breed, breedable))
 
-    for thing in breedable, kids:
-        for i in thing:
-            new_pop.extend(i)
+    for i in kids:
+        new_pop.extend(i)
+    for i in breedable:
+        new_pop.extend(i[:2])
     return new_pop
 
 
 def breed(tuple_creatures):
-    creature1, creature2 = tuple_creatures
+    creature1, creature2, temperature = tuple_creatures
     kid1, kid2 = deepcopy(creature1), deepcopy(creature2)
 
     for i in range(kid1.circles):
         if random.randint(0, 1):
             kid1.genome[i] = deepcopy(creature2.genome[i])
-    if random.randint(1, 1000) < 1000 * MUTATION_RATE:
+    if random.randint(1, 1000) < 1000 * get_mutation_rate(temperature):
         kid1.mutate()
 
     kid1.update_array()
@@ -44,7 +61,7 @@ def breed(tuple_creatures):
     for i in range(kid2.circles):
         if random.randint(0, 1):
             kid2.genome[i] = deepcopy(creature1.genome[i])
-    if random.randint(1, 1000) < 1000 * MUTATION_RATE:
+    if random.randint(1, 1000) < 1000 * get_mutation_rate(temperature):
         kid2.mutate()
 
     kid2.update_array()
@@ -61,15 +78,25 @@ def count_difference(pop):
     return (sum(differences)/len(differences))/max_difference
 
 
+def check_circle_diversity(pop):
+    existing_circles = []
+    for creature in pop:
+        for circle in creature.genome:
+            if not circle in existing_circles:
+                existing_circles.append(circle)
+    return len(existing_circles)
+
+
 def init_worker(img):
     Genome.change_target(img)
+    T = START_T
 
 
 def save_population(pop):
     name = '{}g {}c {}p.json'.format(gen, pop[0].circles, len(pop))
     file = open(os.path.join(path, name), 'w')
     list_population = [i.get_list_representation() for i in pop]
-    json.dump([gen, list_population], file)
+    json.dump([gen, T, list_population], file)
     file.close()
 
 
@@ -96,8 +123,9 @@ if __name__ == '__main__':
         file = open(os.path.join(path, sorted_file_list[-1]), 'r')
         save = json.load(file)
         gen = save[0]
+        T = save[1]
         population = []
-        for genome in save[1]:
+        for genome in save[2]:
             population.append(Genome(len(genome), genome))
 
     else:
@@ -113,21 +141,25 @@ if __name__ == '__main__':
         Genome.change_target(chosen_image)
 
         gen = 0
+        T = START_T
         population = []
         for i in range(args['population']):
-            population.append(Genome(3))
+            population.append(Genome(20))
 
     try:
         max_fitness = population[0].fitness
         while True:
-            sorted_pop = sort_population(population)
+            sorted_pop = sort_population(population, T)
             population = next_gen(sorted_pop)
             gen += 1
-            if gen % 50 == 1:
-                print('generation: {:<6} best fitness: {:<11} '
-                      'difference: {:5.5f}% with {} circles'.format(gen, population[0].fitness,
-                                                                    count_difference(population) * 100,
-                                                                    population[0].circles))
+            T *= T_CHANGE
+            if gen % 40 == 1:
+                print('generation: {:<6} best fitness: {:<12} '
+                      'diversity: {:<4} best diversity: {:3} with {} circles and temp={:<.5f}'.format(gen, population[0].fitness,
+                                                                check_circle_diversity(population),
+                                                                check_circle_diversity(population[:len(population)//2]),
+                                                                population[0].circles, T))
+                print('mutation rate: {}, wildcard rate: {}'.format(get_mutation_rate(T), get_wildcards_ratio(T)))
             if gen % 200 == 0:
                 if (population[0].fitness - max_fitness) / abs(max_fitness) < 0.01 and population[0].circles <= args['circles']:
                     for i in population:
@@ -142,6 +174,6 @@ if __name__ == '__main__':
                 max_fitness = population[0].fitness
 
     except KeyboardInterrupt:
-        population[0].draw(scale=7, save=True, path=path, name='ziemniaki.bmp')
+        population[0].draw(scale=7, save=True, path=path, name='ziemniaki.bmp', show=True)
         save_population(population)
 
