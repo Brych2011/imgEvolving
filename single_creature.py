@@ -82,6 +82,12 @@ class Circle(object):
             self.__radius = Genome.max_radius
         else:
             self.__radius = value
+
+    def __eq__(self, other):
+        return self.x == other.x and \
+               self.y == other.y and \
+               self.radius == other.radius and \
+               self.color == other.color
         
 
 class Genome(object):

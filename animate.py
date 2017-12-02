@@ -10,10 +10,14 @@ parser = argparse.ArgumentParser(description='Create GIF images based on best cr
 
 parser.add_argument('-d', '--directory', help='Save directory path path')
 parser.add_argument('-s', '--scale', help='Scale of result GIF', type=int)
-parser.add_argument('-f', '--fps', type=int)
+parser.add_argument('-f', '--fps', help='Determine FPS. Default 10', type=int)
+
 
 args = vars(parser.parse_args())
 scale = args['scale']
+
+if not args['fps']:
+    args['fps'] = 10
 
 path = args['directory']
 file_list = [f for f in os.listdir(path) if f.endswith('.json')]
