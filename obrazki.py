@@ -7,9 +7,37 @@ import argparse
 import os
 from PIL import Image
 import multiprocessing
+from math import inf
 
 MUTATION_RATE = 0.3
 
+
+class Population(object):
+
+    def __init__(self, size,  mutation_rate, circles, length=inf):
+        self.size = size
+        self.length = length
+        self.mutation_rate = mutation_rate
+
+        self.creature_list = [Genome(circles) for i in range(size)]
+        self.generation = 0
+
+    def sort(self):
+        temp = [(i, i.fitness) for i in self.creature_list]
+        self.creature_list = [i[0] for i in sorted(temp, key=lambda item: item[1] * -1)]
+
+    def next_gen(self):
+        self.sort()
+
+        new_pop = []
+        breedable = [(self.creature_list[i], self.creature_list[i+1]) for i in range(0, self.size//2, 2)]
+
+        kids = list(map(breed, breedable))
+
+        for i in kids, breedable:
+            for j in i:
+                new_pop.extend(j)
+        self.creature_list = new_pop
 
 def sort_population(pop):
     temp = [(i, i.fitness) for i in pop]
@@ -115,7 +143,7 @@ if __name__ == '__main__':
         gen = 0
         population = []
         for i in range(args['population']):
-            population.append(Genome(3))
+            population.append(Genome(300))
 
     try:
         max_fitness = population[0].fitness
@@ -123,12 +151,12 @@ if __name__ == '__main__':
             sorted_pop = sort_population(population)
             population = next_gen(sorted_pop)
             gen += 1
-            if gen % 50 == 1:
+            if gen % 50 == 2:
                 print('generation: {:<6} best fitness: {:<11} '
                       'difference: {:5.5f}% with {} circles'.format(gen, population[0].fitness,
                                                                     count_difference(population) * 100,
                                                                     population[0].circles))
-            if gen % 200 == 0:
+            if gen % 30 == 1:
                 if (population[0].fitness - max_fitness) / abs(max_fitness) < 0.01 and population[0].circles <= args['circles']:
                     for i in population:
                         new_circle = Circle(random.randint(0 - Genome.legal_border, Genome.target_shape[1] + Genome.legal_border),  # #x

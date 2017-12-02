@@ -10,6 +10,7 @@ parser = argparse.ArgumentParser(description='Create GIF images based on best cr
 
 parser.add_argument('-d', '--directory', help='Save directory path path')
 parser.add_argument('-s', '--scale', help='Scale of result GIF', type=int)
+parser.add_argument('-f', '--fps', type=int)
 
 args = vars(parser.parse_args())
 scale = args['scale']
@@ -28,6 +29,7 @@ for i in sorted_file_list:
     except json.JSONDecodeError:
         print('unreadable file:', i)
     creature = population[0]
+    file.close()
 
     pgim = pygame.Surface((target_im.size[0] * scale, target_im.size[1] * scale), pygame.SRCALPHA)
 
@@ -44,4 +46,4 @@ for i in sorted_file_list:
     im = Image.frombytes('RGB', (target_im.size[0] * scale, target_im.size[1] * scale), pg_stringim)
     image_list.append(np.array(im))
 
-imageio.mimsave(os.path.join(path, 'animation.gif'), image_list, loop=1, fps='5')
+imageio.mimsave(os.path.join(path, 'animation.gif'), image_list, loop=1, fps=args['fps'])
