@@ -11,13 +11,20 @@ import multiprocessing
 from math import inf
 
 MUTATION_RATE = 0.3
-ZERO_WILDCARD_GEN = 40000  # Useless right now
-T_CHANGE = 0.9997
-START_T = 10
+
 
 class Population(object):
 
-    def __init__(self, size,  mutation_rate, circles, length=inf):
+    def __init__(self, **kwargs):
+        """file, size,  mutation_rate, circles, length=inf"""
+        file = kwargs['file']
+        if file:
+            self.generation, population_list = json.load(file)
+            self.creature_list = []
+            for genome in population_list:
+                self.creature_list.append(Genome(len(genome), genome))
+
+
         self.size = size
         self.length = length
         self.mutation_rate = mutation_rate
@@ -42,12 +49,10 @@ class Population(object):
                 new_pop.extend(j)
         self.creature_list = new_pop
 
+
 def sort_population(pop):
     temp = [(i, i.fitness) for i in pop]
     sorted_temp = [i[0] for i in sorted(temp, key=lambda temp: temp[1] * -1)]
-    for i in range(len(sorted_temp)):
-        if random.randrange(0, 1000) < 1000 * get_wildcards_ratio(temperature):
-            sorted_temp.insert(1, sorted_temp.pop(i))
     return sorted_temp
 
 
@@ -71,7 +76,7 @@ def breed(tuple_creatures):
     for i in range(kid1.circles):
         if random.randint(0, 1):
             kid1.genome[i] = deepcopy(creature2.genome[i])
-    if random.randint(1, 1000) < 1000 * get_mutation_rate(temperature):
+    if random.randint(1, 1000) < 1000 * MUTATION_RATE:
         kid1.mutate()
 
     kid1.update_array()
@@ -80,7 +85,7 @@ def breed(tuple_creatures):
     for i in range(kid2.circles):
         if random.randint(0, 1):
             kid2.genome[i] = deepcopy(creature1.genome[i])
-    if random.randint(1, 1000) < 1000 * get_mutation_rate(temperature):
+    if random.randint(1, 1000) < 1000 * MUTATION_RATE:
         kid2.mutate()
 
     kid2.update_array()
@@ -108,7 +113,6 @@ def check_circle_diversity(pop):
 
 def init_worker(img):
     Genome.change_target(img)
-    T = START_T
 
 
 def save_population(pop):
@@ -142,9 +146,8 @@ if __name__ == '__main__':
         file = open(os.path.join(path, sorted_file_list[-1]), 'r')
         save = json.load(file)
         gen = save[0]
-        T = save[1]
         population = []
-        for genome in save[2]:
+        for genome in save[1]:
             population.append(Genome(len(genome), genome))
 
     else:
@@ -160,7 +163,6 @@ if __name__ == '__main__':
         Genome.change_target(chosen_image)
 
         gen = 0
-        T = START_T
         population = []
         for i in range(args['population']):
 
@@ -169,7 +171,7 @@ if __name__ == '__main__':
     try:
         max_fitness = population[0].fitness
         while True:
-            sorted_pop = sort_population(population, T)
+            sorted_pop = sort_population(population)
             population = next_gen(sorted_pop)
             gen += 1
 
