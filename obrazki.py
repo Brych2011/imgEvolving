@@ -15,22 +15,22 @@ MUTATION_RATE = 0.3
 
 class Population(object):
 
-    def __init__(self, **kwargs):
+    def __init__(self, mutation_rate=0.3, lenght=inf,  **kwargs):
         """file, size,  mutation_rate, circles, length=inf"""
-        file = kwargs['file']
+        file = kwargs.get('file')
+        self.mutation_rate = mutation_rate
+        self.length = lenght
         if file:
             self.generation, population_list = json.load(file)
             self.creature_list = []
             for genome in population_list:
                 self.creature_list.append(Genome(len(genome), genome))
 
-
-        self.size = size
-        self.length = length
-        self.mutation_rate = mutation_rate
-
-        self.creature_list = [Genome(circles) for i in range(size)]
-        self.generation = 0
+            self.size = len(self.creature_list)
+        else:
+            self.size = kwargs['size']
+            self.creature_list = [Genome(kwargs['circles']) for i in range(self.size)]
+            self.generation = 0
 
     def sort(self):
         temp = [(i, i.fitness) for i in self.creature_list]
@@ -48,6 +48,21 @@ class Population(object):
             for j in i:
                 new_pop.extend(j)
         self.creature_list = new_pop
+
+    def save(self, directory):
+        name = '{}g {}c {}p.json'.format(self.generation, self.creature_list[0].circles, self.size)
+        file = open(os.path.join(directory, name), 'w')
+        list_population = [i.get_list_representation() for i in self.creature_list]
+        json.dump([self.generation, list_population], file)
+        file.close()
+
+    def get_circle_diversity(self):
+        existing_circles = []
+        for creatue in self.creature_list:
+            for circle in creatue.genome:
+                if not circle in existing_circles:
+                    existing_circles.append(circle)
+        return len(existing_circles)
 
 
 def sort_population(pop):
@@ -70,7 +85,7 @@ def next_gen(sorted_pop):
 
 
 def breed(tuple_creatures):
-    creature1, creature2, temperature = tuple_creatures
+    creature1, creature2 = tuple_creatures
     kid1, kid2 = deepcopy(creature1), deepcopy(creature2)
 
     for i in range(kid1.circles):
@@ -138,17 +153,12 @@ if __name__ == '__main__':
     if os.path.exists(path):
         new_im = pygame.image.load(os.path.join(path, 'target.bmp'))
 
-        pool = multiprocessing.Pool(processes=4, initializer=init_worker, initargs=(new_im,))
         Genome.change_target(new_im)
 
         file_list = [f for f in os.listdir(path) if f.endswith('.json')]
         sorted_file_list = sorted(file_list, key=lambda file_list: int(file_list[:file_list.find('g')]))
         file = open(os.path.join(path, sorted_file_list[-1]), 'r')
-        save = json.load(file)
-        gen = save[0]
-        population = []
-        for genome in save[1]:
-            population.append(Genome(len(genome), genome))
+        mPopulation = Population(file=file)
 
     else:
         os.makedirs(path)
@@ -159,27 +169,26 @@ if __name__ == '__main__':
 
         chosen_image.save(os.path.join(path, 'target.bmp'), 'BMP')
 
-        pool = multiprocessing.Pool(processes=4, initializer=init_worker, initargs=(chosen_image,))
         Genome.change_target(chosen_image)
 
-        gen = 0
-        population = []
-        for i in range(args['population']):
-
-            population.append(Genome(300))
+        mPopulation = Population(size=args['population'], circles=100)
 
     try:
-        max_fitness = population[0].fitness
+        max_fitness = mPopulation.creature_list[0].fitness
         while True:
-            sorted_pop = sort_population(population)
-            population = next_gen(sorted_pop)
-            gen += 1
+            mPopulation.sort()
+            mPopulation.next_gen()
+            mPopulation.generation += 1
 
-            if gen % 50 == 2:
+            if mPopulation.generation % 50 == 2:
+                mPopulation.save(path)
                 print('generation: {:<6} best fitness: {:<11} '
-                      'difference: {:5.5f}% with {} circles'.format(gen, population[0].fitness,
-                                                                    count_difference(population) * 100,
-                                                                    population[0].circles))
+                      'diversity of {} with {} circles'.format(mPopulation.generation,
+                                                               mPopulation.creature_list[0].fitness,
+                                                               mPopulation.get_circle_diversity(),
+                                                               mPopulation.creature_list[0].circles))
+
+            """
             if gen % 30 == 1:
                 if (population[0].fitness - max_fitness) / abs(max_fitness) < 0.01 and population[0].circles <= args['circles']:
                     for i in population:
@@ -192,8 +201,9 @@ if __name__ == '__main__':
                         i.update_fitness()
                 save_population(population)
                 max_fitness = population[0].fitness
+            """
 
     except KeyboardInterrupt:
-        population[0].draw(scale=7, save=True, path=path, name='ziemniaki.bmp', show=True)
-        save_population(population)
+        mPopulation.creature_list[0].draw(scale=7, save=True, path=path, name='ziemniaki.bmp', show=True)
+        mPopulation.save(path)
 
