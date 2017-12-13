@@ -133,10 +133,12 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--directory', help='specify directory for saving population', required=True)
     parser.add_argument('-c', '--circles', help='max amount of circles on a picture. Omitted if continuing', type=int)
     parser.add_argument('-p', '--population', help='specify size of the population. Omitted if continuing', type=int)
+    parser.add_argument('-r', '--paralell', help='specify amount of parallel populations', type=int)
 
-    args = vars(parser.parse_args())
+    args = parser.parse_args()
+    dir_args = vars(args)
 
-    path = args['directory']
+    path = dir_args['directory']
     if os.path.exists(path):
         new_im = pygame.image.load(os.path.join(path, 'target.bmp'))
 
@@ -150,7 +152,7 @@ if __name__ == '__main__':
     else:
         os.makedirs(path)
 
-        chosen_image = Image.open(args['image'])
+        chosen_image = Image.open(dir_args['image'])
         chosen_image.save(os.path.join(path, 'original.' + chosen_image.format.lower()))
         chosen_image.thumbnail((90, 90))
 
@@ -158,7 +160,7 @@ if __name__ == '__main__':
 
         Genome.change_target(chosen_image)
 
-        mPopulation = Population(size=args['population'], circles=args['circles'])
+        mPopulation = Population(size=dir_args['population'], circles=dir_args['circles'])
 
     try:
         max_fitness = mPopulation.creature_list[0].fitness
