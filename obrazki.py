@@ -17,9 +17,11 @@ class Population(object):
 
     def __init__(self, mutation_rate=0.3, lenght=inf,  **kwargs):
         """file, size,  mutation_rate, circles, length=inf"""
-        file = kwargs.get('file')
+        self.pool = multiprocessing.Pool(4, init_worker(Genome.target_image))
         self.mutation_rate = mutation_rate
         self.length = lenght
+        self.finished = False
+        file = kwargs.get('file')
         if file:
             self.generation, population_list = json.load(file)
             self.creature_list = []
@@ -27,14 +29,17 @@ class Population(object):
                 self.creature_list.append(Genome(len(genome), genome))
 
             self.size = len(self.creature_list)
+            self.best_creature = self.creature_list[0]
         else:
             self.size = kwargs['size']
             self.creature_list = [Genome(kwargs['circles']) for i in range(self.size)]
             self.generation = 0
+            self.best_creature = self.creature_list[0]
 
     def sort(self):
         temp = [(i, i.fitness) for i in self.creature_list]
         self.creature_list = [i[0] for i in sorted(temp, key=lambda item: item[1] * -1)]
+        self.best_creature = self.creature_list[0]
 
     def next_gen(self):
         self.sort()
@@ -42,15 +47,19 @@ class Population(object):
         new_pop = []
         breedable = [(self.creature_list[i], self.creature_list[i+1]) for i in range(0, self.size//2, 2)]
 
-        kids = list(map(breed, breedable))
+        kids = list(self.pool.map(breed, breedable))
 
         for i in kids, breedable:
             for j in i:
                 new_pop.extend(j)
         self.creature_list = new_pop
+        self.generation += 1
 
-    def save(self, directory):
-        name = '{}g {}c {}p.json'.format(self.generation, self.creature_list[0].circles, self.size)
+        if self.generation >= self.length:
+            self.finished = True
+
+    def save(self, directory, addition=''):
+        name = '{}g {}c {}p {}.json'.format(self.generation, self.creature_list[0].circles, self.size, addition)
         file = open(os.path.join(directory, name), 'w')
         list_population = [i.get_list_representation() for i in self.creature_list]
         json.dump([self.generation, list_population], file)
@@ -64,24 +73,11 @@ class Population(object):
                     existing_circles.append(circle)
         return len(existing_circles)
 
-
-def sort_population(pop):
-    temp = [(i, i.fitness) for i in pop]
-    sorted_temp = [i[0] for i in sorted(temp, key=lambda temp: temp[1] * -1)]
-    return sorted_temp
-
-
-def next_gen(sorted_pop):
-    new_pop = []
-    breedable = [(sorted_pop[i], sorted_pop[i+1], T) for i in range(0, len(sorted_pop)//2, 2)]
-
-    kids = list(pool.map(breed, breedable))
-
-    for i in kids:
-        new_pop.extend(i)
-    for i in breedable:
-        new_pop.extend(i[:2])
-    return new_pop
+    def merge(self, second_pop):
+        if self.best_creature.fitness <= second_pop.best_creature.fitness:
+            second_pop.merge(self)
+        else:
+            self.creature_list[self.size//4:] = second_pop.creature_list[:-1 * self.size//4]
 
 
 def breed(tuple_creatures):
@@ -108,34 +104,25 @@ def breed(tuple_creatures):
     return kid1, kid2
 
 
-def count_difference(pop):
-    max_difference = len(pop[0].array.flat) * 255
-    differences = []
-    for i in range(1, len(pop)):
-        dif = sum(abs(pop[0].array - pop[i].array).flat)
-        differences.append(dif)
-    return (sum(differences)/len(differences))/max_difference
-
-
-def check_circle_diversity(pop):
-    existing_circles = []
-    for creature in pop:
-        for circle in creature.genome:
-            if not circle in existing_circles:
-                existing_circles.append(circle)
-    return len(existing_circles)
-
-
 def init_worker(img):
     Genome.change_target(img)
 
 
-def save_population(pop):
-    name = '{}g {}c {}p.json'.format(gen, pop[0].circles, len(pop))
-    file = open(os.path.join(path, name), 'w')
-    list_population = [i.get_list_representation() for i in pop]
-    json.dump([gen, T, list_population], file)
-    file.close()
+def run_subpopulation(size, circles, pipe_entry, dir):
+    pop = Population(size=size, circles=circles)
+    end = False
+    while not end:
+        pop.sort()
+        pop.next_gen()
+        if pipe_entry.poll():
+            ans = pipe_entry.recv()
+            if ans == 2:
+                pipe_entry.send(pop.generation)
+            elif ans == 1:
+                pop.save(dir, multiprocessing.current_process().name)
+            else:
+                end = True
+    pipe_entry.send(pop)
 
 
 if __name__ == '__main__':
@@ -171,14 +158,16 @@ if __name__ == '__main__':
 
         Genome.change_target(chosen_image)
 
-        mPopulation = Population(size=args['population'], circles=100)
+        mPopulation = Population(size=args['population'], circles=args['circles'])
 
     try:
         max_fitness = mPopulation.creature_list[0].fitness
         while True:
             mPopulation.sort()
             mPopulation.next_gen()
-            mPopulation.generation += 1
+
+            if mPopulation.get_circle_diversity() < mPopulation.creature_list[0].circles * 1.5:
+                pass
 
             if mPopulation.generation % 50 == 2:
                 mPopulation.save(path)

@@ -227,11 +227,13 @@ class Genome(object):
             Genome.im_size = image_object.get_size()
             Genome.target = pygame.surfarray.array3d(image_object).astype('int16')  # #convert to int16 array
             Genome.target_shape = Genome.target.shape
+            Genome.target_image = image_object
         elif isinstance(image_object, Image.Image):
             mode = image_object.mode
             size = image_object.size
             data = image_object.tobytes()
             image_object = pygame.image.fromstring(data, size, mode)
+            Genome.target_image = image_object
             Genome.im_size = image_object.get_size()
             Genome.target = pygame.surfarray.array3d(image_object).astype('int16')  # #convert to int16 array
             Genome.target_shape = Genome.target.shape
