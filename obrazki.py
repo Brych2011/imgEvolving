@@ -7,17 +7,17 @@ import argparse
 import os
 from PIL import Image
 import multiprocessing
+import time
 
 from math import inf
 
-MUTATION_RATE = 0.3
+MUTATION_RATE = 0.75
 
 
 class Population(object):
 
     def __init__(self, mutation_rate=0.3, lenght=inf,  **kwargs):
         """file, size,  mutation_rate, circles, length=inf"""
-        self.pool = multiprocessing.Pool(4, init_worker(Genome.target_image))
         self.mutation_rate = mutation_rate
         self.length = lenght
         self.finished = False
@@ -47,7 +47,7 @@ class Population(object):
         new_pop = []
         breedable = [(self.creature_list[i], self.creature_list[i+1]) for i in range(0, self.size//2, 2)]
 
-        kids = list(self.pool.map(breed, breedable))
+        kids = list(map(breed, breedable))
 
         for i in kids, breedable:
             for j in i:
@@ -59,7 +59,7 @@ class Population(object):
             self.finished = True
 
     def save(self, directory, addition=''):
-        name = '{}g {}c {}p {}.json'.format(self.generation, self.creature_list[0].circles, self.size, addition)
+        name = '{}g {}c {}p{}.json'.format(self.generation, self.creature_list[0].circles, self.size, addition)
         file = open(os.path.join(directory, name), 'w')
         list_population = [i.get_list_representation() for i in self.creature_list]
         json.dump([self.generation, list_population], file)
@@ -88,7 +88,7 @@ def breed(tuple_creatures):
         if random.randint(0, 1):
             kid1.genome[i] = deepcopy(creature2.genome[i])
     if random.randint(1, 1000) < 1000 * MUTATION_RATE:
-        kid1.mutate()
+        kid1.mutate(0.6)
 
     kid1.update_array()
     kid1.update_fitness()
@@ -97,7 +97,7 @@ def breed(tuple_creatures):
         if random.randint(0, 1):
             kid2.genome[i] = deepcopy(creature1.genome[i])
     if random.randint(1, 1000) < 1000 * MUTATION_RATE:
-        kid2.mutate()
+        kid2.mutate(0.6)
 
     kid2.update_array()
     kid2.update_fitness()
@@ -111,18 +111,26 @@ def init_worker(img):
 def run_subpopulation(size, circles, pipe_entry, dir):
     pop = Population(size=size, circles=circles)
     end = False
-    while not end:
-        pop.sort()
-        pop.next_gen()
-        if pipe_entry.poll():
-            ans = pipe_entry.recv()
-            if ans == 2:
-                pipe_entry.send(pop.generation)
-            elif ans == 1:
-                pop.save(dir, multiprocessing.current_process().name)
-            else:
-                end = True
-    pipe_entry.send(pop)
+    local_path = os.path.join(dir, multiprocessing.current_process().name)
+    try:
+        while True:
+            pop.sort()
+            pop.next_gen()
+            if pipe_entry.poll():
+                ans = pipe_entry.recv()
+                if ans == 2:
+                    pipe_entry.send(pop.best_creature.fitness)
+                elif ans == 1:
+                    pop.save(local_path)
+                    print(multiprocessing.current_process().name + 'done')
+                else:
+                    pipe_entry.send(pop)
+                    break
+    except KeyboardInterrupt:
+        pop.save(local_path)
+        print(multiprocessing.current_process().name + 'saved')
+
+
 
 
 if __name__ == '__main__':
@@ -133,7 +141,7 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--directory', help='specify directory for saving population', required=True)
     parser.add_argument('-c', '--circles', help='max amount of circles on a picture. Omitted if continuing', type=int)
     parser.add_argument('-p', '--population', help='specify size of the population. Omitted if continuing', type=int)
-    parser.add_argument('-r', '--paralell', help='specify amount of parallel populations', type=int)
+    parser.add_argument('-r', '--parallel', help='specify amount of parallel populations', type=int)
 
     args = parser.parse_args()
     dir_args = vars(args)
@@ -159,42 +167,32 @@ if __name__ == '__main__':
         chosen_image.save(os.path.join(path, 'target.bmp'), 'BMP')
 
         Genome.change_target(chosen_image)
-
-        mPopulation = Population(size=dir_args['population'], circles=dir_args['circles'])
+        pops = []
+        for i in range(args.parallel):
+            pipe1, pipe2 = multiprocessing.Pipe()
+            process = multiprocessing.Process(target=run_subpopulation, name='pop' + str(i),
+                                              args=(args.population, args.circles, pipe2, args.directory))
+            pops.append([pipe1, process])
+            pops[i][1].start()
+            os.makedirs(os.path.join(path, 'pop' + str(i)))
 
     try:
-        max_fitness = mPopulation.creature_list[0].fitness
+        lead = 0
         while True:
-            mPopulation.sort()
-            mPopulation.next_gen()
-
-            if mPopulation.get_circle_diversity() < mPopulation.creature_list[0].circles * 1.5:
-                pass
-
-            if mPopulation.generation % 50 == 2:
-                mPopulation.save(path)
-                print('generation: {:<6} best fitness: {:<11} '
-                      'diversity of {} with {} circles'.format(mPopulation.generation,
-                                                               mPopulation.creature_list[0].fitness,
-                                                               mPopulation.get_circle_diversity(),
-                                                               mPopulation.creature_list[0].circles))
-
-            """
-            if gen % 30 == 1:
-                if (population[0].fitness - max_fitness) / abs(max_fitness) < 0.01 and population[0].circles <= args['circles']:
-                    for i in population:
-                        new_circle = Circle(random.randint(0 - Genome.legal_border, Genome.target_shape[1] + Genome.legal_border),  # #x
-                                            random.randint(0 - Genome.legal_border, Genome.target_shape[0] + Genome.legal_border),  # #y
-                                            random.randint(1, Genome.max_radius), Color())
-                        i.genome.insert(random.randint(0, i.circles), new_circle)
-                        i.circles += 1
-                        i.update_array()
-                        i.update_fitness()
-                save_population(population)
-                max_fitness = population[0].fitness
-            """
+            time.sleep(30)
+            lead = (None, inf * -1)
+            for i in enumerate(pops):
+                i[1][0].send(2)
+                received = i[1][0].recv()
+                if received > lead[1]:
+                    lead = (i[0], received)
+            print(lead[1])
+            time.sleep(10)
+            for i in pops:
+                i[0].send(1)
 
     except KeyboardInterrupt:
-        mPopulation.creature_list[0].draw(scale=7, save=True, path=path, name='ziemniaki.bmp', show=True)
-        mPopulation.save(path)
+        print('please wait for saving')
+        for i in pops:
+            i[1].join()
 

@@ -155,7 +155,7 @@ class Genome(object):
            summed. Result is squared for faster evolution and multiplied by -1, as difference from target is a
            negative trait"""
 
-    def mutate(self):
+    def mutate(self, repeat_chance=0.25):
         repeat = True
         while repeat:
             choice = random.randint(1, 5)  # #choose a random mutation
@@ -183,7 +183,7 @@ class Genome(object):
 
             elif choice == 5:  # #redefine opacity
                 self.genome[random.randrange(0, self.circles)].color[3] = random.randint(0, 255)
-            repeat = not random.randint(0, 3)  # #have 25% chance for another mutation
+            repeat = random.randrange(0, 100) < 100 * repeat_chance  # #have 25% chance for another mutation
 
     def draw(self, scale=1, show=False, save=False, path='./', name = DEFAULT):
         """Method used for rendering genome's image and showing it or saving"""
