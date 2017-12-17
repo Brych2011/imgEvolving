@@ -108,8 +108,11 @@ def init_worker(img):
     Genome.change_target(img)
 
 
-def run_subpopulation(size, circles, pipe_entry, dir):
-    pop = Population(size=size, circles=circles)
+def run_subpopulation(size, circles, pipe_entry, dir, saved=None):
+    if saved:
+        pop = Population(file=saved)
+    else:
+        pop = Population(size=size, circles=circles)
     end = False
     local_path = os.path.join(dir, multiprocessing.current_process().name)
     try:
@@ -118,16 +121,19 @@ def run_subpopulation(size, circles, pipe_entry, dir):
             pop.next_gen()
             if pipe_entry.poll():
                 ans = pipe_entry.recv()
-                if ans == 2:
+                if ans ==3:
+                    pipe_entry.send(pop.get_circle_diversity())
+                elif ans == 2:
                     pipe_entry.send(pop.best_creature.fitness)
                 elif ans == 1:
-                    pop.save(local_path)
+                    pop.save(dir)
                     print(multiprocessing.current_process().name + 'done')
                 else:
                     pipe_entry.send(pop)
                     break
     except KeyboardInterrupt:
-        pop.save(local_path)
+        pop.save(dir)
+        pop.best_creature.draw(scale=5, show=True, save=True, path=dir)
         print(multiprocessing.current_process().name + 'saved')
 
 
@@ -149,13 +155,21 @@ if __name__ == '__main__':
     path = dir_args['directory']
     if os.path.exists(path):
         new_im = pygame.image.load(os.path.join(path, 'target.bmp'))
-
         Genome.change_target(new_im)
 
-        file_list = [f for f in os.listdir(path) if f.endswith('.json')]
-        sorted_file_list = sorted(file_list, key=lambda file_list: int(file_list[:file_list.find('g')]))
-        file = open(os.path.join(path, sorted_file_list[-1]), 'r')
-        mPopulation = Population(file=file)
+        settings = json.load(open(os.path.join(path, 'settings.json')))
+
+        pops = []
+        for i in settings['populations']['names']:
+            pop_path = os.path.join(path, i)
+            file_list = [f for f in os.listdir(pop_path) if f.endswith('.json')]
+            sorted_file_list = sorted(file_list, key=lambda file_list: int(file_list[:file_list.find('g')]))
+            file = open(os.path.join(pop_path, sorted_file_list[-1]), 'r')
+            pipe1, pipe2 = multiprocessing.Pipe()
+            process = multiprocessing.Process(target=run_subpopulation, name=i,
+                                              args=(settings['population_size'], settings['circles'], pipe2, pop_path, file))
+            pops.append((pipe1, process))
+            process.start()
 
     else:
         os.makedirs(path)
@@ -163,18 +177,26 @@ if __name__ == '__main__':
         chosen_image = Image.open(dir_args['image'])
         chosen_image.save(os.path.join(path, 'original.' + chosen_image.format.lower()))
         chosen_image.thumbnail((90, 90))
-
         chosen_image.save(os.path.join(path, 'target.bmp'), 'BMP')
-
         Genome.change_target(chosen_image)
+
+        settings_file = open(os.path.join(path, 'settings.json'), 'w')
+        settings = {'circles':args.circles, 'const_circles':True, 'populations':{'amount':args.parallel, 'names':[]},
+                    'population_size':args.population}
+
         pops = []
         for i in range(args.parallel):
+            pop_name = 'pop' + str(i)
+            settings['populations']['names'].append(pop_name)
             pipe1, pipe2 = multiprocessing.Pipe()
-            process = multiprocessing.Process(target=run_subpopulation, name='pop' + str(i),
+            process = multiprocessing.Process(target=run_subpopulation, name=pop_name,
                                               args=(args.population, args.circles, pipe2, args.directory))
             pops.append([pipe1, process])
             pops[i][1].start()
-            os.makedirs(os.path.join(path, 'pop' + str(i)))
+            os.makedirs(os.path.join(path, pop_name))
+
+        json.dump(settings, settings_file)
+        settings_file.close()
 
     try:
         lead = 0
@@ -184,6 +206,8 @@ if __name__ == '__main__':
             for i in enumerate(pops):
                 i[1][0].send(2)
                 received = i[1][0].recv()
+                i[1][0].send(3)
+                print('diversity: {}'.format(i[1][0].recv()))
                 if received > lead[1]:
                     lead = (i[0], received)
             print(lead[1])
