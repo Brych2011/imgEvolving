@@ -11,7 +11,7 @@ import time
 
 from math import inf
 
-MUTATION_RATE = 0.75
+MUTATION_RATE = 0.3
 
 
 class Population(object):
@@ -65,10 +65,14 @@ class Population(object):
         json.dump([self.generation, list_population], file)
         file.close()
 
-    def get_circle_diversity(self):
+    def get_circle_diversity(self, better=False):
         existing_circles = []
-        for creatue in self.creature_list:
-            for circle in creatue.genome:
+        if better:
+            thing_to_iterate = self.creature_list[:self.size//2]
+        else:
+            thing_to_iterate = self.creature_list
+        for creature in thing_to_iterate:
+            for circle in creature.genome:
                 if not circle in existing_circles:
                     existing_circles.append(circle)
         return len(existing_circles)
@@ -77,7 +81,7 @@ class Population(object):
         if self.best_creature.fitness <= second_pop.best_creature.fitness:
             second_pop.merge(self)
         else:
-            self.creature_list[self.size//4:] = second_pop.creature_list[:-1 * self.size//4]
+            self.creature_list[1:] = second_pop.creature_list[:-1]
 
 
 def breed(tuple_creatures):
@@ -108,9 +112,11 @@ def init_worker(img):
     Genome.change_target(img)
 
 
-def run_subpopulation(size, circles, pipe_entry, dir, saved=None):
+def run_subpopulation(size, circles, pipe_entry, dir, saved=None, population=None):
     if saved:
         pop = Population(file=saved)
+    elif population:
+        pop = population
     else:
         pop = Population(size=size, circles=circles)
     end = False
@@ -118,25 +124,35 @@ def run_subpopulation(size, circles, pipe_entry, dir, saved=None):
     try:
         while True:
             pop.sort()
+            pop.save(dir)
             pop.next_gen()
             if pipe_entry.poll():
                 ans = pipe_entry.recv()
-                if ans ==3:
-                    pipe_entry.send(pop.get_circle_diversity())
+                if ans == 3:
+                    pipe_entry.send((pop.get_circle_diversity(), pop.get_circle_diversity(better=True)))
                 elif ans == 2:
                     pipe_entry.send(pop.best_creature.fitness)
                 elif ans == 1:
                     pop.save(dir)
                     print(multiprocessing.current_process().name + 'done')
-                else:
+                elif ans == 0:
                     pipe_entry.send(pop)
                     break
+
     except KeyboardInterrupt:
         pop.save(dir)
         pop.best_creature.draw(scale=5, show=True, save=True, path=dir)
         print(multiprocessing.current_process().name + 'saved')
 
 
+def best_pop(populations):
+    best = (None, inf * -1)
+    for i in enumerate(populations):
+        i[1][0].send(2)
+        received = i[1][0].recv()
+        if received > best[1]:
+            best = (i[0], received)
+    return best
 
 
 if __name__ == '__main__':
@@ -157,7 +173,8 @@ if __name__ == '__main__':
         new_im = pygame.image.load(os.path.join(path, 'target.bmp'))
         Genome.change_target(new_im)
 
-        settings = json.load(open(os.path.join(path, 'settings.json')))
+        settings_file = open(os.path.join(path, 'settings.json'))
+        settings = json.load(settings_file)
 
         pops = []
         for i in settings['populations']['names']:
@@ -167,7 +184,8 @@ if __name__ == '__main__':
             file = open(os.path.join(pop_path, sorted_file_list[-1]), 'r')
             pipe1, pipe2 = multiprocessing.Pipe()
             process = multiprocessing.Process(target=run_subpopulation, name=i,
-                                              args=(settings['population_size'], settings['circles'], pipe2, pop_path, file))
+                                              args=(settings['population_size'], settings['circles'], pipe2, pop_path),
+                                              kwargs={'saved': file})
             pops.append((pipe1, process))
             process.start()
 
@@ -181,8 +199,8 @@ if __name__ == '__main__':
         Genome.change_target(chosen_image)
 
         settings_file = open(os.path.join(path, 'settings.json'), 'w')
-        settings = {'circles':args.circles, 'const_circles':True, 'populations':{'amount':args.parallel, 'names':[]},
-                    'population_size':args.population}
+        settings = {'populations':{'amount': args.parallel, 'names': [], 'finished_names': []},
+                    'population_size': args.population, 'circles': args.circles, 'const_circles': True}
 
         pops = []
         for i in range(args.parallel):
@@ -190,7 +208,7 @@ if __name__ == '__main__':
             settings['populations']['names'].append(pop_name)
             pipe1, pipe2 = multiprocessing.Pipe()
             process = multiprocessing.Process(target=run_subpopulation, name=pop_name,
-                                              args=(args.population, args.circles, pipe2, args.directory))
+                                              args=(args.population, args.circles, pipe2, os.path.join(args.directory, pop_name)))
             pops.append([pipe1, process])
             pops[i][1].start()
             os.makedirs(os.path.join(path, pop_name))
@@ -200,22 +218,63 @@ if __name__ == '__main__':
 
     try:
         lead = 0
+        print(settings['populations']['names'])
         while True:
-            time.sleep(30)
-            lead = (None, inf * -1)
-            for i in enumerate(pops):
-                i[1][0].send(2)
-                received = i[1][0].recv()
-                i[1][0].send(3)
-                print('diversity: {}'.format(i[1][0].recv()))
-                if received > lead[1]:
-                    lead = (i[0], received)
-            print(lead[1])
             time.sleep(10)
+            lead = best_pop(pops)
+            pops[lead[0]][0].send(3)  # Query best population for diversity
+            diversity = pops[lead[0]][0].recv()
+            print(diversity)
+
+            if diversity[1] < settings['circles'] * 1.4:
+                pops[lead[0]][0].send(0)
+                received_good_pop = pops[lead[0]][0].recv()
+                pops[lead[0]][1].join()
+                name1 = pops[lead[0]][1].name
+                del pops[lead[0]]
+
+                lead = best_pop(pops)
+
+                pops[lead[0]][0].send(0)
+                received_bad_pop = pops[lead[0]][0].recv()
+                pops[lead[0]][1].join()
+                name2 = pops[lead[0]][1].name
+                del pops[lead[0]]
+
+                received_good_pop.merge(received_bad_pop)
+
+                pipe1, pipe2 = multiprocessing.Pipe()
+                better_process = multiprocessing.Process(target=run_subpopulation, name=name1,
+                                                         kwargs={'population': received_good_pop},
+                                                         args=(args.population, args.circles, pipe2,
+                                                               os.path.join(args.directory, name1)))
+                better_process.start()
+                pops.append((pipe1, better_process))
+
+                new_name = 'pop{}'.format(str(len(settings['populations']['names']) + len(settings['populations']['finished_names'])))
+                pipe1, pipe2 = multiprocessing.Pipe()
+                os.makedirs(os.path.join(args.directory, new_name))
+                new_process = multiprocessing.Process(target=run_subpopulation, name=new_name,
+                                              args=(args.population, args.circles, pipe2, os.path.join(args.directory, new_name)))
+                new_process.start()
+                pops.append((pipe1, new_process))
+
+                settings['populations']['names'].remove(name2)
+                settings['populations']['names'].append(new_name)
+                settings['populations']['finished_names'].append(name2)
+
+                print('population {} merged with population {}'.format(name1, name2))
+
+
+            print(lead[1])
+            time.sleep(5)
+            """
             for i in pops:
                 i[0].send(1)
+            """
 
     except KeyboardInterrupt:
+        json.dump(settings, settings_file)
         print('please wait for saving')
         for i in pops:
             i[1].join()
