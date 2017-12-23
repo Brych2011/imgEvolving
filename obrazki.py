@@ -84,6 +84,42 @@ class Population(object):
             self.creature_list[1:] = second_pop.creature_list[:-1]
 
 
+def select(population):
+    """function for selecting and pairing genomes to breed. Population should be sorted beforehand"""
+    sum_fitness = 0
+    max_fitness = population[0].fitness
+    min_fintess = population[-1].fitness
+    temp = []
+    result = []
+    for creature in population:
+        sum_fitness += creature.fitness - min_fintess
+        temp.append((creature, creature.fitness - min_fintess))
+
+    for i in range(population.size//4):
+        ok = False
+        while not ok:
+            chosen = random.randrange(0, sum_fitness)
+            for entry in temp:
+                chosen -= entry[1]
+                if chosen <= 0:
+                    candidate1 = entry[0]
+            chosen = random.randrange(0, sum_fitness)
+            for entry in temp:
+                chosen -= entry[1]
+                if chosen <= 0:
+                    candidate2 = entry[0]
+            ok = candidate1 is candidate2
+        result.append((candidate1, candidate2))
+    return result
+        
+
+def dumb_select(population):
+    result = []
+    for i in range(0, population.size//2, 2):
+        result.append((population[i], population[i+1]))
+    return result
+
+
 def breed(tuple_creatures):
     creature1, creature2 = tuple_creatures
     kid1, kid2 = deepcopy(creature1), deepcopy(creature2)
