@@ -187,16 +187,7 @@ class Genome(object):
 
     def draw(self, scale=1, show=False, save=False, path='./', name = DEFAULT):
         """Method used for rendering genome's image and showing it or saving"""
-        pgim = pygame.Surface((Genome.im_size[0] * scale, Genome.im_size[1] * scale), pygame.SRCALPHA)
-
-        for circle in self.genome:
-            new_im = pygame.Surface((circle.radius * 2 * scale, circle.radius * 2 * scale),
-                                    pygame.SRCALPHA)  # create a surface of size of the circle
-            pygame.draw.circle(new_im, circle.color,
-                               (circle.radius * scale, circle.radius * scale),
-                               circle.radius * scale)  # #draw circle in the middle of its Surface
-            pgim.blit(new_im, [(circle.x - circle.radius) * scale,
-                               (circle.y - circle.radius) * scale])  # #blit onto main surface
+        pgim = self.get_surface(scale)
 
         pg_stringim = pygame.image.tostring(pgim, 'RGB')  # transform into PIL.Image for .show() method
         im = Image.frombytes('RGB', (Genome.im_size[0] * scale, Genome.im_size[1] * scale), pg_stringim)
@@ -208,6 +199,19 @@ class Genome(object):
             im.save(final_name, 'BMP')
         if show:
             im.show()
+
+    def get_surface(self, scale):
+        pgim = pygame.Surface((Genome.im_size[0] * scale, Genome.im_size[1] * scale), pygame.SRCALPHA)
+
+        for circle in self.genome:
+            new_im = pygame.Surface((circle.radius * 2 * scale, circle.radius * 2 * scale),
+                                    pygame.SRCALPHA)  # create a surface of size of the circle
+            pygame.draw.circle(new_im, circle.color,
+                               (circle.radius * scale, circle.radius * scale),
+                               circle.radius * scale)  # #draw circle in the middle of its Surface
+            pgim.blit(new_im, [(circle.x - circle.radius) * scale,
+                               (circle.y - circle.radius) * scale])  # #blit onto main surface
+        return pgim
 
     def get_list_representation(self):
         """Used to generate list representation ready to save with json"""
@@ -221,7 +225,7 @@ class Genome(object):
         return result
 
     @staticmethod
-    def change_target(image_object):
+    def set_target(image_object):
         """change the target of all creatures. Requires pygame surface as an argument"""
         if isinstance(image_object, pygame.Surface):
             Genome.im_size = image_object.get_size()
@@ -245,7 +249,7 @@ if __name__ == '__main__':
     try:
         improvements = 0
         new_im = pygame.image.load('small_version.jpg')
-        Genome.change_target(new_im)
+        Genome.set_target(new_im)
         while True:
             ans = input('n - new file \nc - continue latest creature\n')
             if ans.lower() == 'n':

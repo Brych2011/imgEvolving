@@ -18,7 +18,7 @@ findings = glob.glob(os.path.join(path, '{}*json'.format(args['generation'])))
 print(findings)
 
 new_im = image.load(os.path.join(path, 'target.bmp'))
-Genome.change_target(new_im)
+Genome.set_target(new_im)
 
 file = open(findings[0], 'r')
 save = json.load(file)

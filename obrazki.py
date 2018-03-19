@@ -105,7 +105,7 @@ def breed(tuple_creatures):
 
 
 def init_worker(img):
-    Genome.change_target(img)
+    Genome.set_target(img)
 
 
 def run_subpopulation(size, circles, pipe_entry, dir):
@@ -140,7 +140,7 @@ if __name__ == '__main__':
     if os.path.exists(path):
         new_im = pygame.image.load(os.path.join(path, 'target.bmp'))
 
-        Genome.change_target(new_im)
+        Genome.set_target(new_im)
 
         file_list = [f for f in os.listdir(path) if f.endswith('.json')]
         sorted_file_list = sorted(file_list, key=lambda file_list: int(file_list[:file_list.find('g')]))
@@ -156,7 +156,7 @@ if __name__ == '__main__':
 
         chosen_image.save(os.path.join(path, 'target.bmp'), 'BMP')
 
-        Genome.change_target(chosen_image)
+        Genome.set_target(chosen_image)
 
         mPopulation = Population(size=args['population'], circles=args['circles'])
 
