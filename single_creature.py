@@ -202,7 +202,6 @@ class Genome(object):
 
     def get_surface(self, scale):
         pgim = pygame.Surface((Genome.im_size[0] * scale, Genome.im_size[1] * scale), pygame.SRCALPHA)
-
         for circle in self.genome:
             new_im = pygame.Surface((circle.radius * 2 * scale, circle.radius * 2 * scale),
                                     pygame.SRCALPHA)  # create a surface of size of the circle

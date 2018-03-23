@@ -31,6 +31,8 @@ class Population(object):
             self.size = len(self.creature_list)
             self.best_creature = self.creature_list[0]
         else:
+            if kwargs.get('target'):
+                Genome.set_target(kwargs['target'])
             self.size = kwargs['size']
             self.creature_list = [Genome(kwargs['circles']) for i in range(self.size)]
             self.generation = 0
