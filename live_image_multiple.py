@@ -2,7 +2,7 @@ import pygame
 from obrazki import Population, Genome, Circle, Color
 import multiprocessing
 import random
-from PIL import Image
+from PIL import Image, ImageGrab
 from io import BytesIO
 import requests
 import numpy as np
@@ -54,66 +54,111 @@ def run_pop(pop_size, circles, target, queue, checkpoint=750, threshold=0.035, d
 
         pop.next_gen()
 
-
-url = 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg/1280px-Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg'
-response = requests.get(url)
-target_img = Image.open(BytesIO(response.content))
-target_img.thumbnail((50, 50))
-Genome.set_target(target_img)
-print(target_img.size)
-print(800//4)
-
-q = multiprocessing.Queue()
-evolving_process = multiprocessing.Process(target=run_pop, args=(4, 10, target_img, q))
-evolving_process.start()
-while q.empty():
-    pass
-
-enhance = False
+if __name__ == '__main__':
+    multiprocessing.freeze_support()
 
 
-# initialize game engine
-pygame.init()
-pygame.font.init()
-# set screen width/height and caption
-screen = pygame.display.set_mode(SCREEN_SIZE)
-pygame.display.set_caption('Ewolucja obrazów')
-myfont = pygame.font.SysFont('Helvetica', 30)
-# initialize clock. used later in the loop.
-clock = pygame.time.Clock()
+    enhance = False
 
-# Loop until the user clicks close button
-print(pretty_coordinates(target_img.size, SCREEN_SIZE, 5)[0][0])
 
-done = False
-while not done:
-    # write event handlers here
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            done = True
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_SPACE:
-                enhance = True
-        if event.type == pygame.KEYUP:
-            if event.key == pygame.K_SPACE:
-                enhance = False
+    # initialize game engine
+    pygame.init()
+    pygame.font.init()
+    # set screen width/height and caption
+    screen = pygame.display.set_mode(SCREEN_SIZE)
+    pygame.display.set_caption('Ewolucja obrazów')
+    myfont = pygame.font.SysFont('Helvetica', 30)
+    # initialize clock. used later in the loop.
+    clock = pygame.time.Clock()
 
-    # write game logic here
-    good_creature, bad_creature, gen = q.get()
-    gen_text = myfont.render('Pokolenie: ' + str(gen), True, (0, 0, 0))
-    circle_text = myfont.render('Liczba kół: ' + str(good_creature.circles), True, (0, 0, 0))
-    space_instruction = myfont.render('Przytrzymaj spację, aby powiększyć', True, (0, 0, 0))
-    # clear the screen before drawing
-    # print(q.qsize())
-    coordinates = pretty_coordinates(target_img.size, SCREEN_SIZE, 5)
-    screen.fill((255, 255, 255))
+    # Loop until the user clicks close button
 
-    screen.blit(good_creature.get_surface(5 if enhance else 1), coordinates[enhance][0])
-    screen.blit(gen_text, (300, 300))
-    screen.blit(circle_text, (300, 350))
-    screen.blit(space_instruction, (50, 450))
-    screen.blit(bad_creature.get_surface(5 if enhance else 1), coordinates[enhance][1])
-    pygame.display.update()
+    done = False
+    img_chosen = False
+    link_error = False
+    image_error = False
+    while not done:
+        # write event handlers here
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                done = True
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    enhance = True
+            if event.type == pygame.KEYUP:
+                if event.key == pygame.K_SPACE:
+                    enhance = False
 
-pygame.quit()
-evolving_process.terminate()
+        screen.fill((255, 255, 255))
+        if not img_chosen:
+            if clipboard.paste():
+                try:
+                    response = requests.get(clipboard.paste())
+                    target_img = Image.open(BytesIO(response.content))
+
+                    img_chosen = True
+
+                    target_img.thumbnail((50, 50))
+                    Genome.set_target(target_img)
+
+                    q = multiprocessing.Queue()
+                    evolving_process = multiprocessing.Process(target=run_pop, args=(4, 10, target_img, q))
+                    evolving_process.start()
+                    while q.empty():
+                        pass
+
+                    enhance = False
+                except Exception as excep:
+                    print(excep)
+                    link_error = True
+            try:
+                if ImageGrab.grabclipboard():
+                    target_img = ImageGrab.grabclipboard()
+                    img_chosen = True
+                    target_img.thumbnail((50, 50))
+                    Genome.set_target(target_img)
+
+                    q = multiprocessing.Queue()
+                    evolving_process = multiprocessing.Process(target=run_pop, args=(4, 10, target_img, q))
+                    evolving_process.start()
+                    while q.empty():
+                        pass
+
+                    enhance = False
+
+            except Exception as excep:
+                print('obrazek')
+                print(excep)
+                image_error = True
+
+            text1 = myfont.render('Aby rozpocząć, przekopiuj do schowka (Crtl + C) obrazek', True, (0, 0, 0))
+            text2 = myfont.render('lub link bezpośrednio do niego', True, (0, 0, 0))
+            link_error_surf = myfont.render('Coś jest nie tak z linkiem. Spróbuj Jeszcze raz bądź użyj innego.', True, (100, 0, 0))
+            image_error_surf = myfont.render('Coś jest nie tak z obrazkiem. Spróbuj jeszcze raz.', True, (100, 0, 0))
+
+            screen.blit(text1, (50, 200))
+            screen.blit(text2, (50, 250))
+            if link_error:
+                screen.blit(link_error_surf, (50, 350))
+            if image_error:
+                screen.blit(image_error_surf, (50, 400))
+
+        else:
+            # write game logic here
+            good_creature, bad_creature, gen = q.get()
+            gen_text = myfont.render('Pokolenie: ' + str(gen), True, (0, 0, 0))
+            circle_text = myfont.render('Liczba kół: ' + str(good_creature.circles), True, (0, 0, 0))
+            space_instruction = myfont.render('Przytrzymaj spację, aby powiększyć', True, (0, 0, 0))
+            # clear the screen before drawing
+            # print(q.qsize())
+            coordinates = pretty_coordinates(target_img.size, SCREEN_SIZE, 5)
+
+            screen.blit(good_creature.get_surface(5 if enhance else 1), coordinates[enhance][0])
+            screen.blit(gen_text, (300, 300))
+            screen.blit(circle_text, (300, 350))
+            screen.blit(space_instruction, (50, 450))
+            screen.blit(bad_creature.get_surface(5 if enhance else 1), coordinates[enhance][1])
+        pygame.display.update()
+
+    pygame.quit()
+    evolving_process.terminate()
