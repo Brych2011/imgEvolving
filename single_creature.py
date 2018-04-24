@@ -10,6 +10,77 @@ import os
 DEFAULT = object()
 
 
+class Shape(object):
+    """Empty object for defining genome sub-shapes"""
+
+    def __init__(self, sort_of_center):
+        self.margin = 15
+        pass
+
+    def random_change(self):
+        pass
+
+    def get_surface(self, scale=1):
+        pass
+
+    def get_center(self):
+        pass
+
+
+class Polygon(Shape):
+    max_sides = 5
+    min_sides = 3
+
+    def __init__(self, center=None, coords=None, color=None):
+        super().__init__(center)
+
+        if coords is not None and \
+                center is None and \
+                Polygon.min_sides <= len(coords) <= Polygon.max_sides:
+            self.coords = coords
+        elif center:
+            self.coords = [(random.randint(center[0] - self.margin, center[0] + self.margin))
+                           for i in range(random.randint(Polygon.min_sides, Polygon.max_sides))]
+        else:
+            self.coords = [(random.randint(-Genome.legal_border, Genome.target_shape[0] + Genome.legal_border),
+                            random.randint(-Genome.legal_border, Genome.target_shape[1] + Genome.legal_border))
+                           for i in range(random.randint(Polygon.min_sides, Polygon.max_sides))]
+
+        if color is not None:
+            self.color = color
+        else:
+            self.color = Color()
+
+    def random_change(self):
+        if len(self.coords) == Polygon.min_sides:
+            choice = random.randint(0,1) * 2  # only 0 and 2 are viable options
+        elif len(self.coords) == Polygon.max_sides:
+            choice = random.randint(0,1)
+        else:
+            choice = random.randint(0,2)
+
+        if choice == 0:  # shift one points coordinates
+            changing = random.randrange(0, len(self.coords))
+            self.coords[changing] = (random.randint(-Genome.legal_border, Genome.target_shape[0] + Genome.legal_border),
+                                     random.randint(-Genome.legal_border, Genome.target_shape[1] + Genome.legal_border))
+
+        if choice == 1:  # remove a point
+            del self.coords[random.randrange(0, len(self.coords))]
+
+        if choice == 2:
+            self.coords.insert(random.randint(0, len(self.coords)),
+                               (random.randint(-Genome.legal_border, Genome.target_shape[0] + Genome.legal_border),
+                                random.randint(-Genome.legal_border, Genome.target_shape[1] + Genome.legal_border)))
+
+    def get_surface(self, scale=1):
+        im = pygame.Surface((Genome.im_size[0] * scale, Genome.im_size[1] * scale), pygame.SRCALPHA)
+        pygame.draw.polygon(im, self.color, [(x * scale, y * scale) for x, y in self.coords])
+        return im
+
+    def get_center(self):
+        return sum([i[0] for i in self.coords]) // len(self.coords), sum([i[1] for i in self.coords]) // len(self.coords)
+
+
 class Color(list):
     """used for representation of color"""
 
@@ -35,14 +106,46 @@ class Color(list):
             list.__setitem__(self, key, value)
 
 
-class Circle(object):
+class Circle(Shape):
     """representation of one circle in genome. Takes care of legality of dimensions"""
 
-    def __init__(self, x, y, radius, color):
-        self.__x = x
-        self.__y = y
-        self.__radius = radius
-        self.color = Color(*color)  # #init Color object
+    def __init__(self, center=None, coords=None, radius=None, color=None):
+        super().__init__(center)
+
+        if coords is not None and center is None:
+            self.x, self.y = coords
+        elif center:
+            self.x, self.y = (random.randint(center[0] - self.margin, center[0] + self.margin),
+                              random.randint(center[1] - self.margin, center[1] + self.margin))
+        else:
+            self.x = random.randrange(0 - Genome.legal_border, Genome.target_shape[1] + Genome.legal_border)
+
+            self.y = random.randrange(0 - Genome.legal_border, Genome.target_shape[0] + Genome.legal_border)
+        self.__radius = radius if radius else random.randint(1, Genome.max_radius)
+        self.color = Color(*color) if color else Color()  # #init Color object
+
+    def random_change(self):
+        choice = random.randint(1, 4)  # #choose a random mutation
+        if choice == 1:  # #redefine color
+            for i in range(3):
+                self.color[i] = random.randint(0, 255)
+        elif choice == 2:  # #redefine position
+            self.x = random.randrange(0 - Genome.legal_border, Genome.target_shape[1] + Genome.legal_border)
+
+            self.y = random.randrange(0 - Genome.legal_border, Genome.target_shape[0] + Genome.legal_border)
+        elif choice == 3:  # #redefine radius
+            self.radius = random.randint(1, Genome.max_radius)
+
+        elif choice == 4:  # #redefine opacity
+            self.color[3] = random.randint(0, 255)
+
+    def get_surface(self, scale=1):
+        im = pygame.Surface((Genome.im_size[0] * scale, Genome.im_size[1] * scale))
+        pygame.draw.circle(im, self.color, (Genome.im_size[0] * scale // 2, Genome.im_size[1] * scale // 2), self.radius)
+        return im
+
+    def get_center(self):
+        return self.x, self.y
 
     @property
     def x(self):
@@ -84,7 +187,8 @@ class Circle(object):
             self.__radius = value
 
     def __eq__(self, other):
-        return self.x == other.x and \
+        return isinstance(other, Circle) and \
+               self.x == other.x and \
                self.y == other.y and \
                self.radius == other.radius and \
                self.color == other.color
@@ -102,20 +206,16 @@ class Genome(object):
 
     legal_border = 30  # #how far out of image can circle's middle be
 
-    def __init__(self, circles, genome_list=DEFAULT):
+    def __init__(self, figure_count, genome_list=DEFAULT):
         self.genome = []
-        self.circles = circles
+        self.figures = figure_count
         self.__array = []
         self.__fitness = 0
         self.update_array()
 
         self.size = Genome.target.shape
         if genome_list == DEFAULT:  # if source list of a genome was not specified
-            for i in range(circles):  # Generate new one with random circles
-                new_circle = Circle(random.randint(0 - Genome.legal_border, Genome.target_shape[1] + Genome.legal_border),  # #x
-                                    random.randint(0 - Genome.legal_border, Genome.target_shape[0] + Genome.legal_border),  # #y
-                                    random.randint(1, Genome.max_radius), Color())
-                self.genome.append(new_circle)
+            self.genome = [Circle() if random.randint(0, 1) else Polygon() for i in range(figure_count)]
         else:
             for i in genome_list:  # #genome list has syntax: [[[r,g,b,a],[x,y],radius], ....]
                 self.genome.append(Circle(i[1][0],  # #read x
@@ -137,14 +237,7 @@ class Genome(object):
     def update_array(self):
         """Method updating the array representation of an image. Should be called after every change,
         along with update_fitness() method"""
-        pgim = pygame.Surface(Genome.im_size, pygame.SRCALPHA)
-        for circle in self.genome:
-            new_im = pygame.Surface((circle.radius * 2, circle.radius * 2),
-                                    pygame.SRCALPHA)  # create a surface of size of the circle
-            pygame.draw.circle(new_im, circle.color,
-                               (circle.radius, circle.radius),
-                               circle.radius)  # #draw circle in the middle of its Surface
-            pgim.blit(new_im, [circle.x - circle.radius, circle.y - circle.radius])  # #blit onto main surface
+        pgim = self.get_surface(1)
         self.__array = pygame.surfarray.array3d(pgim).astype('int16')
 
     def update_fitness(self):
@@ -158,31 +251,21 @@ class Genome(object):
     def mutate(self):
         repeat = True
         while repeat:
-            choice = random.randint(1, 5)  # #choose a random mutation
-            if choice == 1:  # #redefine color
-                chosen = random.randrange(0, self.circles)
-                for i in range(3):
-                    self.genome[chosen].color[i] = random.randint(0, 255)
-            elif choice == 2:  # #redefine position
-                self.genome[random.randrange(0, self.circles)].x = random.randrange(0 - Genome.legal_border,
-                                                                                    Genome.target_shape[1] + Genome.legal_border)
-
-                self.genome[random.randrange(0, self.circles)].y = random.randrange(0 - Genome.legal_border,
-                                                                                    Genome.target_shape[0] + Genome.legal_border)
-            elif choice == 3:  # #redefine radius
-                self.genome[random.randrange(0, self.circles)].radius = random.randint(1, Genome.max_radius)
-
-            elif choice == 4:  # #swap two circles on z axis
-                index1 = random.randrange(0, self.circles)
-                index2 = random.randrange(0, self.circles)
-                while index1 == index2:
-                    index2 = random.randrange(0, self.circles)  # #generate two random indices
+            chosen_figure = random.randrange(0, self.figures)
+            choice = random.randint(0, 3)
+            if choice == 0:  # swap two figures
+                index1 = random.randrange(0, self.figures)
+                index2 = random.randrange(0, self.figures)
                 temp = self.genome[index1]
-                self.genome[index1] = self.genome[index2]  # #swap them
+                self.genome[index1] = self.genome[index2]
                 self.genome[index2] = temp
 
-            elif choice == 5:  # #redefine opacity
-                self.genome[random.randrange(0, self.circles)].color[3] = random.randint(0, 255)
+            elif choice == 1:  # change figure
+                center = self.genome[chosen_figure].get_center()
+                self.genome[chosen_figure] = Circle(center=center) if isinstance(self.genome[chosen_figure], Polygon) else Polygon(center=center)
+
+            else:
+                self.genome[chosen_figure].random_change()
             repeat = not random.randint(0, 3)  # #have 25% chance for another mutation
 
     def draw(self, scale=1, show=False, save=False, path='./', name = DEFAULT):
@@ -196,26 +279,22 @@ class Genome(object):
             if name == DEFAULT:
                 name = str(int(time.time())) + ".bmp"
             final_name = os.path.join(path, name)
-            im.save(final_name, 'BMP')
+            im.legacy_save(final_name, 'BMP')
         if show:
             im.show()
 
-    def get_surface(self, scale):
+    def get_surface(self, scale=1):
         pgim = pygame.Surface((Genome.im_size[0] * scale, Genome.im_size[1] * scale), pygame.SRCALPHA)
-        for circle in self.genome:
-            new_im = pygame.Surface((circle.radius * 2 * scale, circle.radius * 2 * scale),
-                                    pygame.SRCALPHA)  # create a surface of size of the circle
-            pygame.draw.circle(new_im, circle.color,
-                               (circle.radius * scale, circle.radius * scale),
-                               circle.radius * scale)  # #draw circle in the middle of its Surface
-            pgim.blit(new_im, [(circle.x - circle.radius) * scale,
-                               (circle.y - circle.radius) * scale])  # #blit onto main surface
+
+        for figure in self.genome:
+            pgim.blit(figure.get_surface(), (0, 0))
+
         return pgim
 
     def get_list_representation(self):
         """Used to generate list representation ready to save with json"""
         result = []
-        for i in range(self.circles):
+        for i in range(self.figures):
             new_circle = []
             new_circle.append(self.genome[i].color)
             new_circle.append([self.genome[i].x, self.genome[i].y])

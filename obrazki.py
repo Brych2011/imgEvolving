@@ -7,11 +7,12 @@ import argparse
 import os
 from PIL import Image
 import multiprocessing
+import pickle
 
 from math import inf
 
 MUTATION_RATE = 0.3
-
+USING_MULTIPROCESSING = False
 
 class Population(object):
 
@@ -49,7 +50,10 @@ class Population(object):
         new_pop = []
         breedable = [(self.creature_list[i], self.creature_list[i+1]) for i in range(0, self.size//2, 2)]
 
-        kids = list(self.pool.map(breed, breedable))
+        if USING_MULTIPROCESSING:
+            kids = list(self.pool.map(breed, breedable))
+        else:
+            kids = list(map(breed, breedable))
 
         for i in kids, breedable:
             for j in i:
@@ -60,11 +64,17 @@ class Population(object):
         if self.generation >= self.length:
             self.finished = True
 
-    def save(self, directory, addition=''):
-        name = '{}g {}c {}p {}.json'.format(self.generation, self.creature_list[0].circles, self.size, addition)
+    def legacy_save(self, directory, addition=''):
+        name = '{}g {}c {}p {}.json'.format(self.generation, self.creature_list[0].figures, self.size, addition)
         file = open(os.path.join(directory, name), 'w')
         list_population = [i.get_list_representation() for i in self.creature_list]
         json.dump([self.generation, list_population], file)
+        file.close()
+
+    def save(self, directory, addition=''):
+        name = '{}g {}c {}p {}.pickle'.format(self.generation, self.creature_list[0].figures, self.size, addition)
+        file = open(os.path.join(directory, name), 'wb')
+        pickle.dump(self, file)
         file.close()
 
     def get_circle_diversity(self):
@@ -86,7 +96,7 @@ def breed(tuple_creatures):
     creature1, creature2 = tuple_creatures
     kid1, kid2 = deepcopy(creature1), deepcopy(creature2)
 
-    for i in range(kid1.circles):
+    for i in range(kid1.figures):
         if random.randint(0, 1):
             kid1.genome[i] = deepcopy(creature2.genome[i])
     if random.randint(1, 1000) < 1000 * MUTATION_RATE:
@@ -95,7 +105,7 @@ def breed(tuple_creatures):
     kid1.update_array()
     kid1.update_fitness()
 
-    for i in range(kid2.circles):
+    for i in range(kid2.figures):
         if random.randint(0, 1):
             kid2.genome[i] = deepcopy(creature1.genome[i])
     if random.randint(1, 1000) < 1000 * MUTATION_RATE:
@@ -168,16 +178,15 @@ if __name__ == '__main__':
             mPopulation.sort()
             mPopulation.next_gen()
 
-            if mPopulation.get_circle_diversity() < mPopulation.creature_list[0].circles * 1.5:
+            if mPopulation.get_circle_diversity() < mPopulation.creature_list[0].figures * 1.5:
                 pass
 
             if mPopulation.generation % 50 == 2:
                 mPopulation.save(path)
                 print('generation: {:<6} best fitness: {:<11} '
-                      'diversity of {} with {} circles'.format(mPopulation.generation,
+                      'diversity of with {} circles'.format(mPopulation.generation,
                                                                mPopulation.creature_list[0].fitness,
-                                                               mPopulation.get_circle_diversity(),
-                                                               mPopulation.creature_list[0].circles))
+                                                               mPopulation.creature_list[0].figures))
 
             """
             if gen % 30 == 1:
