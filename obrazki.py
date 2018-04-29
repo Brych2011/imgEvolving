@@ -2,7 +2,7 @@ import pygame
 import random
 import json
 from single_creature import Genome, Circle, Color
-from copy import deepcopy
+from copy import deepcopy, copy
 import argparse
 import os
 from PIL import Image
@@ -14,13 +14,12 @@ from math import inf
 MUTATION_RATE = 0.3
 
 
-
 class Population(object):
 
     def __init__(self, mutation_rate=0.3, lenght=inf, multiprocessed=True, **kwargs):
         """file, size,  mutation_rate, circles, length=inf"""
         self.multiprocessed = multiprocessed
-        self.pool = multiprocessing.Pool(4, init_worker(Genome.target_image))
+        self.pool = multiprocessing.Pool(4, initializer=init_worker, initargs=(kwargs['image'],))
         self.mutation_rate = mutation_rate
         self.length = lenght
         self.finished = False
@@ -76,10 +75,15 @@ class Population(object):
     def save(self, directory, addition=''):
         name = '{}g {}c {}p {}.pickle'.format(self.generation, self.creature_list[0].figures, self.size, addition)
         if self.multiprocessed:
-            del self.pool
-        file = open(os.path.join(directory, name), 'wb')
-        pickle.dump(self, file)
-        file.close()
+            no_pool = copy(self)
+            del no_pool.pool
+            file = open(os.path.join(directory, name), 'wb')
+            pickle.dump(no_pool, file)
+            file.close()
+        else:
+            file = open(os.path.join(directory, name), 'wb')
+            pickle.dump(self, file)
+            file.close()
 
     def get_circle_diversity(self):
         existing_circles = []
@@ -159,10 +163,12 @@ if __name__ == '__main__':
 
         Genome.set_target(new_im)
 
-        file_list = [f for f in os.listdir(path) if f.endswith('.json')]
+        file_list = [f for f in os.listdir(path) if f.endswith('.pickle')]
         sorted_file_list = sorted(file_list, key=lambda file_list: int(file_list[:file_list.find('g')]))
-        file = open(os.path.join(path, sorted_file_list[-1]), 'r')
-        mPopulation = Population(file=file)
+        file = open(os.path.join(path, sorted_file_list[-1]), 'rb')
+        mPopulation = pickle.load(file)
+        mPopulation.pool = multiprocessing.Pool(4, initializer=init_worker, initargs=(new_im,))
+
 
     else:
         os.makedirs(path)
@@ -175,7 +181,7 @@ if __name__ == '__main__':
 
         Genome.set_target(chosen_image)
 
-        mPopulation = Population(size=args['population'], circles=args['circles'])
+        mPopulation = Population(size=args['population'], circles=args['circles'], image=chosen_image)
 
     try:
         max_fitness = mPopulation.creature_list[0].fitness
@@ -209,6 +215,6 @@ if __name__ == '__main__':
             """
 
     except KeyboardInterrupt:
-        mPopulation.creature_list[0].draw(scale=1, save=True, path=path, name='ziemniaki.bmp', show=True)
+        mPopulation.creature_list[0].draw(scale=7, save=True, path=path, name='ziemniaki.bmp', show=True)
         mPopulation.save(path)
 

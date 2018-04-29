@@ -1,5 +1,6 @@
 import pygame
 from PIL import Image
+import numpy as np
 import random
 import json
 from copy import deepcopy
@@ -142,7 +143,7 @@ class Circle(Shape):
 
     def get_surface(self, scale=1):
         im = pygame.Surface((Genome.im_size[0] * scale, Genome.im_size[1] * scale), pygame.SRCALPHA)
-        pygame.draw.circle(im, self.color, (Genome.im_size[0] * scale // 2, Genome.im_size[1] * scale // 2), self.radius)
+        pygame.draw.circle(im, self.color, (Genome.im_size[0] * scale // 2, Genome.im_size[1] * scale // 2), self.radius * scale)
         return im
 
     def get_center(self):
@@ -244,7 +245,7 @@ class Genome(object):
     def update_fitness(self):
         """Method calculating genome's fitness. Should be called after every change, after update_array()"""
 
-        self.__fitness = (sum(abs(Genome.target - self.array).flat) ** 2) * -1
+        self.__fitness = np.linalg.norm(Genome.target.flatten() - self.array.flatten()) * -1
         """Difference is calculated as array of absolute values of results of subtracktions. It is then flatted and
            summed. Result is squared for faster evolution and multiplied by -1, as difference from target is a
            negative trait"""
@@ -288,7 +289,7 @@ class Genome(object):
         pgim = pygame.Surface((Genome.im_size[0] * scale, Genome.im_size[1] * scale), pygame.SRCALPHA)
 
         for figure in self.genome:
-            pgim.blit(figure.get_surface(), (0, 0))
+            pgim.blit(figure.get_surface(scale), (0, 0))
 
         return pgim
 
