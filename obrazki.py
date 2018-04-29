@@ -17,7 +17,7 @@ class Population(object):
 
     def __init__(self, mutation_rate=0.3, lenght=inf,  **kwargs):
         """file, size,  mutation_rate, circles, length=inf"""
-        self.pool = multiprocessing.Pool(4, init_worker(Genome.target_image))
+        self.pool = multiprocessing.Pool(4, initializer=init_worker, initargs=(kwargs['image'],))
         self.mutation_rate = mutation_rate
         self.length = lenght
         self.finished = False
@@ -147,7 +147,7 @@ if __name__ == '__main__':
         file_list = [f for f in os.listdir(path) if f.endswith('.json')]
         sorted_file_list = sorted(file_list, key=lambda file_list: int(file_list[:file_list.find('g')]))
         file = open(os.path.join(path, sorted_file_list[-1]), 'r')
-        mPopulation = Population(file=file)
+        mPopulation = Population(file=file, image=new_im)
 
     else:
         os.makedirs(path)
@@ -160,7 +160,7 @@ if __name__ == '__main__':
 
         Genome.set_target(chosen_image)
 
-        mPopulation = Population(size=args['population'], circles=args['circles'])
+        mPopulation = Population(size=args['population'], circles=args['circles'], image=chosen_image)
 
     try:
         max_fitness = mPopulation.creature_list[0].fitness

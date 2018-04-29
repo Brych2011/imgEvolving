@@ -1,5 +1,6 @@
 import pygame
 from PIL import Image
+import numpy as np
 import random
 import json
 from copy import deepcopy
@@ -150,10 +151,9 @@ class Genome(object):
     def update_fitness(self):
         """Method calculating genome's fitness. Should be called after every change, after update_array()"""
 
-        self.__fitness = (sum(abs(Genome.target - self.array).flat) ** 2) * -1
-        """Difference is calculated as array of absolute values of results of subtracktions. It is then flatted and
-           summed. Result is squared for faster evolution and multiplied by -1, as difference from target is a
-           negative trait"""
+        self.__fitness = np.linalg.norm(Genome.target.flatten() - self.array.flatten()) * -1
+        """Difference is calculated as euclidean distance between flattened arrays of genome and target image
+         multiplied by -1, as difference from target is a negative trait"""
 
     def mutate(self):
         repeat = True
