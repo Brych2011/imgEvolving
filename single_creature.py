@@ -39,7 +39,8 @@ class Polygon(Shape):
                 Polygon.min_sides <= len(coords) <= Polygon.max_sides:
             self.coords = coords
         elif center:
-            self.coords = [(random.randint(center[0] - self.margin, center[0] + self.margin))
+            self.coords = [(random.randint(center[0] - self.margin, center[0] + self.margin),
+                            random.randint(center[1] - self.margin, center[1] + self.margin))
                            for i in range(random.randint(Polygon.min_sides, Polygon.max_sides))]
         else:
             self.coords = [(random.randint(-Genome.legal_border, Genome.target_shape[0] + Genome.legal_border),
@@ -140,7 +141,7 @@ class Circle(Shape):
             self.color[3] = random.randint(0, 255)
 
     def get_surface(self, scale=1):
-        im = pygame.Surface((Genome.im_size[0] * scale, Genome.im_size[1] * scale))
+        im = pygame.Surface((Genome.im_size[0] * scale, Genome.im_size[1] * scale), pygame.SRCALPHA)
         pygame.draw.circle(im, self.color, (Genome.im_size[0] * scale // 2, Genome.im_size[1] * scale // 2), self.radius)
         return im
 
@@ -279,7 +280,7 @@ class Genome(object):
             if name == DEFAULT:
                 name = str(int(time.time())) + ".bmp"
             final_name = os.path.join(path, name)
-            im.legacy_save(final_name, 'BMP')
+            im.save(final_name, 'BMP')
         if show:
             im.show()
 

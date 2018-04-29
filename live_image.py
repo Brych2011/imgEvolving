@@ -70,8 +70,8 @@ while not done:
                                 random.randint(0 - Genome.legal_border, Genome.target_shape[0] + Genome.legal_border),
                                 # #y
                                 random.randint(1, Genome.max_radius), Color())
-            creature.genome.insert(random.randint(0, creature.circles), new_circle)
-            creature.circles += 1
+            creature.genome.insert(random.randint(0, creature.figures), new_circle)
+            creature.figures += 1
             threshold *= 0.8
             print('new circle added')
         fitness_checkpoint = creature.fitness

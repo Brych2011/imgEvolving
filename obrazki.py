@@ -12,12 +12,14 @@ import pickle
 from math import inf
 
 MUTATION_RATE = 0.3
-USING_MULTIPROCESSING = False
+
+
 
 class Population(object):
 
-    def __init__(self, mutation_rate=0.3, lenght=inf,  **kwargs):
+    def __init__(self, mutation_rate=0.3, lenght=inf, multiprocessed=True, **kwargs):
         """file, size,  mutation_rate, circles, length=inf"""
+        self.multiprocessed = multiprocessed
         self.pool = multiprocessing.Pool(4, init_worker(Genome.target_image))
         self.mutation_rate = mutation_rate
         self.length = lenght
@@ -50,7 +52,7 @@ class Population(object):
         new_pop = []
         breedable = [(self.creature_list[i], self.creature_list[i+1]) for i in range(0, self.size//2, 2)]
 
-        if USING_MULTIPROCESSING:
+        if self.multiprocessed:
             kids = list(self.pool.map(breed, breedable))
         else:
             kids = list(map(breed, breedable))
@@ -73,6 +75,8 @@ class Population(object):
 
     def save(self, directory, addition=''):
         name = '{}g {}c {}p {}.pickle'.format(self.generation, self.creature_list[0].figures, self.size, addition)
+        if self.multiprocessed:
+            del self.pool
         file = open(os.path.join(directory, name), 'wb')
         pickle.dump(self, file)
         file.close()
@@ -121,6 +125,7 @@ def init_worker(img):
 
 
 def run_subpopulation(size, circles, pipe_entry, dir):
+
     pop = Population(size=size, circles=circles)
     end = False
     while not end:
@@ -204,6 +209,6 @@ if __name__ == '__main__':
             """
 
     except KeyboardInterrupt:
-        mPopulation.creature_list[0].draw(scale=7, save=True, path=path, name='ziemniaki.bmp', show=True)
+        mPopulation.creature_list[0].draw(scale=1, save=True, path=path, name='ziemniaki.bmp', show=True)
         mPopulation.save(path)
 
