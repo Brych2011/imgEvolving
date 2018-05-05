@@ -1,7 +1,7 @@
 import pygame
 import random
 import json
-from single_creature import Genome, Circle, Color
+from single_creature import Genome, Circle, Color, Polygon
 from copy import deepcopy, copy
 import argparse
 import os
@@ -181,7 +181,7 @@ if __name__ == '__main__':
 
         Genome.set_target(chosen_image)
 
-        mPopulation = Population(size=args['population'], circles=args['circles'], image=chosen_image)
+        mPopulation = Population(size=args['population'], circles=8, image=chosen_image)
 
     try:
         max_fitness = mPopulation.creature_list[0].fitness
@@ -199,20 +199,17 @@ if __name__ == '__main__':
                                                                mPopulation.creature_list[0].fitness,
                                                                mPopulation.creature_list[0].figures))
 
-            """
-            if gen % 30 == 1:
-                if (population[0].fitness - max_fitness) / abs(max_fitness) < 0.01 and population[0].circles <= args['circles']:
-                    for i in population:
-                        new_circle = Circle(random.randint(0 - Genome.legal_border, Genome.target_shape[1] + Genome.legal_border),  # #x
-                                            random.randint(0 - Genome.legal_border, Genome.target_shape[0] + Genome.legal_border),  # #y
-                                            random.randint(1, Genome.max_radius), Color())
-                        i.genome.insert(random.randint(0, i.circles), new_circle)
-                        i.circles += 1
+            if mPopulation.generation % 500 == 1:
+                if mPopulation.best_creature.fitness / max_fitness - 1 < 0.003 and mPopulation.best_creature.figures <= args['circles']:
+                    for i in mPopulation.creature_list:
+                        new_figure = Circle() if random.randint(0, 1) else Polygon()
+                        i.genome.insert(random.randint(0, i.figures), new_figure)
+                        i.figures += 1
                         i.update_array()
                         i.update_fitness()
-                save_population(population)
-                max_fitness = population[0].fitness
-            """
+                max_fitness = mPopulation.best_creature.fitness
+
+
 
     except KeyboardInterrupt:
         mPopulation.creature_list[0].draw(scale=7, save=True, path=path, name='ziemniaki.bmp', show=True)

@@ -5,6 +5,8 @@ import os
 from PIL import Image
 import imageio
 import numpy as np
+import pickle
+from obrazki import Population
 
 parser = argparse.ArgumentParser(description='Create GIF images based on best creatures')
 
@@ -20,34 +22,19 @@ if not args['fps']:
     args['fps'] = 10
 
 path = args['directory']
-file_list = [f for f in os.listdir(path) if f.endswith('.json')]
+file_list = [f for f in os.listdir(path) if f.endswith('.pickle')]
 sorted_file_list = sorted(file_list, key=lambda file_list: int(file_list[:file_list.find('g')]))
 
 target_im = Image.open(os.path.join(path, 'target.bmp'))
 
 image_list = []
 for i in sorted_file_list:
-    file = open(os.path.join(path, i))
-    try:
-        gen, population = json.load(file)
-    except json.JSONDecodeError:
-        print('unreadable file:', i)
-    creature = population[0]
+    file = open(os.path.join(path, i), 'rb')
+    pop = pickle.load(file)
     file.close()
 
-    pgim = pygame.Surface((target_im.size[0] * scale, target_im.size[1] * scale), pygame.SRCALPHA)
+    pgim = pop.best_creature.get_surface(scale=scale)
 
-    for circle in creature:
-        new_im = pygame.Surface((circle[2] * 2 * scale, circle[2] * 2 * scale),
-                                pygame.SRCALPHA)  # create a surface of size of the circle
-        pygame.draw.circle(new_im, circle[0],
-                           (circle[2] * scale, circle[2] * scale),
-                           circle[2] * scale)  # #draw circle in the middle of its Surface
-        pgim.blit(new_im, [(circle[1][0] - circle[2]) * scale,
-                           (circle[1][1] - circle[2]) * scale])  # #blit onto main surface
-
-    pg_stringim = pygame.image.tostring(pgim, 'RGB')
-    im = Image.frombytes('RGB', (target_im.size[0] * scale, target_im.size[1] * scale), pg_stringim)
-    image_list.append(np.array(im))
+    image_list.append(pygame.surfarray.array3d(pgim).transpose((1, 0, 2)))
 
 imageio.mimsave(os.path.join(path, 'animation.gif'), image_list, loop=1, fps=args['fps'])
