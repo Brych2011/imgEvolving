@@ -1,8 +1,14 @@
 import numpy as np
 import pygame
-from shapes import SimulationRules, Circle
+from shapes import SimulationRules, Circle, debug_random_circle
 from PIL import Image
-from neat_like_sim import Species
+import time
+from copy import deepcopy
+import os
+if __name__ == '__main__':
+    from neat_like_sim import Species
+
+DEFAULT = object()
 
 
 class Genome(object):
@@ -17,9 +23,7 @@ class Genome(object):
             self.figure_count = figures
             self.gene_list = [Circle.random_circle(rules) for i in range(self.figure_count)]
 
-        self.innovation_indices = [g.innovation for g in self.gene_list]
         self.gene_dict = {c.innovation: c for c in self.gene_list}
-        self.max_innovation = max(self.innovation_indices)
         self.rules = rules
         self.species = None
 
@@ -27,6 +31,13 @@ class Genome(object):
         self.__array = None
         self.fitness_up_to_date = False
         self.array_up_to_date = False
+
+        self.update_array()
+        self.update_fitness()
+
+    @property
+    def max_innovation(self):
+        return max(self.gene_dict.keys()) if self.gene_dict.keys() else 0
 
     @property
     def fitness(self):
@@ -44,8 +55,8 @@ class Genome(object):
 
     def get_surface(self, scale=1):
         im = pygame.Surface((self.rules.target_size[0] * scale, self.rules.target_size[1] * scale), pygame.SRCALPHA)
-        for figure in sorted(self.gene_dict.keys(), key=lambda i: i.z):
-            im.blit(figure.get_surface(scale), (0, 0))
+        for key in sorted(self.gene_dict.keys(), key=lambda i: self.gene_dict[i].z):
+            im.blit(self.gene_dict[key].get_surface(scale), (0, 0))
 
         return im
 
@@ -71,8 +82,8 @@ class Genome(object):
         excess = 0
         compatible_gene_difference = 0
 
-        for g in other.gene_dict.keys():
-            matching = self.gene_dict.get(g.innovation)
+        for innovation, g in other.gene_dict.items():
+            matching = self.gene_dict.get(innovation)
             if matching:
                 compatible_gene_difference += g.distance(matching)
             else:
@@ -81,12 +92,12 @@ class Genome(object):
                 else:
                     excess += 1
 
-        for g in self.gene_dict.keys():
-            matching = other.gene_dict.get(g.innovation)
+        for innovation, g in self.gene_dict.items():
+            matching = other.gene_dict.get(innovation)
             if matching:
                 pass  # already processed
             else:
-                if g.innovation < other.max_innovation:
+                if innovation < other.max_innovation:
                     disjoint += 1
                 else:
                     excess += 1
@@ -96,10 +107,28 @@ class Genome(object):
                compatible_gene_difference * self.rules.distance_weights['comp_genes']
 
     def new_circle(self):
-        new = Circle.random_circle(self.rules)
+        # new = Circle.random_circle(self.rules)
+        new = debug_random_circle(self.rules)
         self.gene_list.append(new)
         self.gene_dict[new.innovation] = new
 
+    def draw(self, scale=1, show=False, save=False, path='./', name = DEFAULT):
+        """Method used for rendering genome's image and showing it or saving"""
+        pgim = self.get_surface(scale)
+
+        pg_stringim = pygame.image.tostring(pgim, 'RGB')  # transform into PIL.Image for .show() method
+        im = Image.frombytes('RGB', (self.rules.target_size[0] * scale, self.rules.target_size[1] * scale), pg_stringim)
+
+        if save:
+            if name == DEFAULT:
+                name = str(int(time.time())) + ".bmp"
+            final_name = os.path.join(path, name)
+            im.save(final_name, 'BMP')
+        if show:
+            im.show()
+
+    def safe_copy(self):
+        return Genome(determined_genome=deepcopy(self.gene_list), rules=self.rules, figures="doesnot matter")
 
 
 

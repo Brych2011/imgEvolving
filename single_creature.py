@@ -14,8 +14,12 @@ DEFAULT = object()
 class Shape(object):
     """Empty object for defining genome sub-shapes"""
 
+    maxInnovation = 0
+
     def __init__(self, sort_of_center):
         self.margin = 15
+        self.innovation = Shape.maxInnovation
+        Shape.maxInnovation += 1
         pass
 
     def random_change(self):
@@ -143,7 +147,7 @@ class Circle(Shape):
 
     def get_surface(self, scale=1):
         im = pygame.Surface((Genome.im_size[0] * scale, Genome.im_size[1] * scale), pygame.SRCALPHA)
-        pygame.draw.circle(im, self.color, (Genome.im_size[0] * scale // 2, Genome.im_size[1] * scale // 2), self.radius * scale)
+        pygame.draw.circle(im, self.color, (self.x * scale, self.y * scale), self.radius * scale)
         return im
 
     def get_center(self):

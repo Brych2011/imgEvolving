@@ -11,7 +11,7 @@ import pickle
 
 from math import inf
 
-MUTATION_RATE = 0.3
+MUTATION_RATE = 1
 
 
 class Population(object):
@@ -19,7 +19,7 @@ class Population(object):
     def __init__(self, mutation_rate=0.3, lenght=inf, multiprocessed=True, **kwargs):
         """file, size,  mutation_rate, circles, length=inf"""
         self.multiprocessed = multiprocessed
-        self.pool = multiprocessing.Pool(4, initializer=init_worker, initargs=(kwargs['image'],))
+        self.pool = multiprocessing.Pool(12, initializer=init_worker, initargs=(kwargs['image'],))
         self.mutation_rate = mutation_rate
         self.length = lenght
         self.finished = False
@@ -167,7 +167,7 @@ if __name__ == '__main__':
         sorted_file_list = sorted(file_list, key=lambda file_list: int(file_list[:file_list.find('g')]))
         file = open(os.path.join(path, sorted_file_list[-1]), 'rb')
         mPopulation = pickle.load(file)
-        mPopulation.pool = multiprocessing.Pool(4, initializer=init_worker, initargs=(new_im,))
+        mPopulation.pool = multiprocessing.Pool(12, initializer=init_worker, initargs=(new_im,))
 
 
     else:
@@ -185,6 +185,7 @@ if __name__ == '__main__':
 
     try:
         max_fitness = mPopulation.creature_list[0].fitness
+        last_size_fitness = -inf
         while True:
             mPopulation.sort()
             mPopulation.next_gen()
@@ -200,7 +201,12 @@ if __name__ == '__main__':
                                                                mPopulation.creature_list[0].figures))
 
             if mPopulation.generation % 500 == 1:
-                if mPopulation.best_creature.fitness / max_fitness - 1 < 0.003 and mPopulation.best_creature.figures <= args['circles']:
+
+                if mPopulation.best_creature.fitness - last_size_fitness > 0 and\
+                        mPopulation.best_creature.fitness / max_fitness - 1 < 0.003 and \
+                        mPopulation.best_creature.figures <= args['circles']:
+
+                    last_size_fitness = mPopulation.best_creature.fitness
                     for i in mPopulation.creature_list:
                         new_figure = Circle() if random.randint(0, 1) else Polygon()
                         i.genome.insert(random.randint(0, i.figures), new_figure)

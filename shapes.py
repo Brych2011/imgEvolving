@@ -2,6 +2,7 @@ from random import randrange, randint
 
 import pygame
 from PIL import Image
+from copy import deepcopy
 import numpy as np
 
 
@@ -9,8 +10,8 @@ class SimulationRules(object):
     """data class to pass to everything. Mostly avoids nasty globals"""
 
     def __init__(self, target_img, target_array, target_size, max_circle_radius, max_margin, propability_scales,
-                 distance_weights, distance_threshold, children_per_gen):
-        self.target_img = target_img
+                 distance_weights, distance_threshold, children_per_gen, serious_mutation_rate):
+        # self.target_img = target_img
         self.target_array = target_array
         self.target_size = target_size
         self.max_circle_radius = max_circle_radius
@@ -20,6 +21,7 @@ class SimulationRules(object):
         self.distance_weights = distance_weights
         self.distance_threshold = distance_threshold
         self.children_per_gen = children_per_gen
+        self.serious_mutation_rate = serious_mutation_rate
 
 
 class Gene(object):
@@ -32,7 +34,7 @@ class Gene(object):
 
 class Circle(Gene):
 
-    def __init__(self, x, y, r, z, color, rules: SimulationRules):
+    def __init__(self, x, y, r, z, color, rules: SimulationRules, source=None):
         super().__init__(rules)
 
         self.__x = None
@@ -43,13 +45,22 @@ class Circle(Gene):
         self.y = y
         self.r = r
         self.z = z
-        self.color = color
+        something = [1, 2, 3, 4]
+        another_thing = np.array(something)
+        self.not_color = another_thing
+        self.color = 'marmolada'
+        self.color = (1, 2, 3, 4)
+        self.color = np.array([1, 2, 3, 4])
+        self.color = np.array(something, dtype='int64')
+        self.color = self.not_color
+        for i, element in enumerate(self.color):
+            self.color[i] = i * 10
 
         self.rules = rules
 
     def get_surface(self, scale=1):
         im = pygame.Surface((self.rules.target_size[0] * scale, self.rules.target_size[1] * scale), pygame.SRCALPHA)
-        pygame.draw.circle(im, self.color, (self.x * scale, self.y * scale), self.r * scale)
+        pygame.draw.circle(im, self.pygame_color, (int(self.x * scale + 0.5), int(self.y * scale + 0.5)), int(self.r * scale + 0.5))
         return im
 
     def gaussian_change(self):
@@ -70,6 +81,8 @@ class Circle(Gene):
 
     @property
     def pygame_color(self):
+        self.color[self.color > 255] = 255
+        self.color[self.color < 255] = 255
         return pygame.Color(*list(map(int, self.color + 0.5)))
 
     @property
@@ -105,17 +118,29 @@ class Circle(Gene):
     @r.setter
     def r(self, value):
         if value < 1:
-            self.__r = value
+            self.__r = 1
         elif value > self.rules.max_circle_radius:
             self.__r = self.rules.max_circle_radius
         else:
             self.__r = value
 
-    @classmethod
-    def random_circle(cls, rules: SimulationRules):
-        return cls(x=randrange(0 - rules.max_margin, rules.target_size[0] + rules.max_margin),
+    @staticmethod
+    def random_circle(rules: SimulationRules):
+        rand_color = np.random.random_integers(0, 255, 4)
+        return Circle(x=randrange(0 - rules.max_margin, rules.target_size[0] + rules.max_margin),
                    y=randrange(0 - rules.max_margin, rules.target_size[1] + rules.max_margin),
                    r=randint(1, rules.max_circle_radius),
                    z=np.random.normal(scale=rules.propability_scales['z'] * 10),
-                   color=pygame.Color([randrange(256) for i in range(4)]),
-                   rules=rules)
+                   color=rand_color,
+                   rules=rules,
+                   source='random_circle')
+
+def debug_random_circle(rules: SimulationRules):
+        rand_color = np.random.random_integers(0, 255, 4)
+        return Circle(x=randrange(0 - rules.max_margin, rules.target_size[0] + rules.max_margin),
+                   y=randrange(0 - rules.max_margin, rules.target_size[1] + rules.max_margin),
+                   r=randint(1, rules.max_circle_radius),
+                   z=np.random.normal(scale=rules.propability_scales['z'] * 10),
+                   color=rand_color,
+                   rules=rules,
+                   source='random_circle')
